@@ -6,12 +6,30 @@ import Memorials from "./Memorials.cdc"
 pub contract ActivityContract {
 
   pub var totalSupply: UInt64
-  pub var createConsumption: UFix64
+  priv var createConsumption: UFix64
   pub var ActivityStoragePath : StoragePath
   pub var ActivityPublicPath: PublicPath
   pub var ActivityAdminStoragePath: StoragePath
 
   pub event activityCreated(id:UInt64, title:String, metadata:String, creator:Address)
+
+  // all rewardParameter use by off-chain compute
+  pub struct RewardParameter{
+    pub var maxRatio: UFix64
+    pub var minRatio: UFix64
+    // if get average vote compare past activities, can get averageRatio * createConsumption CCS reward
+    pub var averageRatio: UFix64
+    pub var asymmetry: UFix64
+
+    init(maxRatio:UFix64, minRatio:UFix64, averageRatio:UFix64, asymmetry: UFix64){
+      self.maxRatio = maxRatio
+      self.minRatio = minRatio
+      self.averageRatio = averageRatio
+      self.asymmetry = asymmetry
+    }
+  }
+
+  priv var rewardParameter: RewardParameter
 
   pub resource Activity {
     pub var title: String
@@ -147,6 +165,10 @@ pub contract ActivityContract {
     return ActivityContract.createConsumption
   }
 
+  pub fun getRewardParams(): ActivityContract.RewardParameter{
+    return ActivityContract.rewardParameter
+  }
+
   access(self) fun createEmptyCollection(): @Collection {
       return <- create Collection()
   }
@@ -255,11 +277,16 @@ pub contract ActivityContract {
       }
       ActivityContract.createConsumption = new
     }
+
+    pub fun updateRewardParameter(_ new: ActivityContract.RewardParameter){
+      ActivityContract.rewardParameter = new
+    }
   }
 
   
   init(){
     self.totalSupply = 0
+    self.rewardParameter = RewardParameter(maxRatio:5.0, minRatio:1.0, averageRatio:1.5, asymmetry: 2.0)
     self.ActivityStoragePath = /storage/ActivitiesCollection
     self.ActivityPublicPath = /public/ActivitiesCollection
     self.ActivityAdminStoragePath = /storage/ActivityAdmin

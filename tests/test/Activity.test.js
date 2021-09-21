@@ -1,10 +1,10 @@
 import path from "path";
 import * as t from "@onflow/types"
-import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert } from "flow-js-testing";
+import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert, shallThrow } from "flow-js-testing";
 
 import { toUFix64, getAdminAddress } from "../src/common";
 import { setupCCSTokenOnAccount, mintTokenAndDistribute, getCCSTokenBalance } from "../src/CCSToken";
-import { deployActivity, createActivity, getCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop } from "../src/Activity";
+import { deployActivity, createActivity, getCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams } from "../src/Activity";
 import { buyBallots, setupBallotOnAccount } from "../src/Ballot";
 import { setupMemorialsOnAccount, getCollectionIds, getCollectionLength, getMemorial, getMemorialsSupply } from "../src/Memorials";
 
@@ -230,5 +230,39 @@ describe("Activity", () => {
 		expect(Bobmemorial.bonus).toBe(toUFix64(5))
 		expect(Bobmemorial.seriesNumber).toBe(2)
 	})
-})
 
+	it("admin can set reward params, user can't", async () => {
+		await deployActivity();
+		const Admin = await getAdminAddress();
+		const Alice = await getAccountAddress("Alice");
+		const rewardParams = await getRewardParams()
+		expect(rewardParams.maxRatio).toBe(toUFix64(5))
+		expect(rewardParams.minRatio).toBe(toUFix64(1))
+		expect(rewardParams.averageRatio).toBe(toUFix64(1.5))
+		expect(rewardParams.asymmetry).toBe(toUFix64(2))
+
+		await shallResolve(async () => {
+			await updateRewardParams(Admin, {
+				maxRatio: toUFix64(6),
+				minRatio: toUFix64(1.1),
+				averageRatio: toUFix64(1.3),
+				asymmetry: toUFix64(2.0)
+			})
+		})
+
+		const rewardParams2 = await getRewardParams()
+		expect(rewardParams2.maxRatio).toBe(toUFix64(6))
+		expect(rewardParams2.minRatio).toBe(toUFix64(1.1))
+		expect(rewardParams2.averageRatio).toBe(toUFix64(1.3))
+		expect(rewardParams2.asymmetry).toBe(toUFix64(2))
+
+		await shallRevert(async () => {
+			await updateRewardParams(Alice, {
+				maxRatio: toUFix64(10),
+				minRatio: toUFix64(1.2),
+				averageRatio: toUFix64(1.3),
+				asymmetry: toUFix64(2.0)
+			})
+		})
+	})
+})

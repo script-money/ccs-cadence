@@ -62,3 +62,15 @@ export const createAirdrop = async (account, title, recievers, bonus = toUFix64(
 	const signers = [account]
 	return sendTransaction({ name, args, signers })
 }
+
+export const getRewardParams = async () => {
+	const name = "Activity/get_reward_params";
+	return executeScript({ name });
+}
+
+export const updateRewardParams = async (account, newParameter) => {
+	const name = "Activity/update_reward_params";
+	const args = [newParameter]
+	const signers = [account]
+	return sendTransaction({ name, args, signers })
+}
