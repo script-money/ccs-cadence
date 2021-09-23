@@ -3,7 +3,7 @@ import * as t from "@onflow/types"
 import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert } from "flow-js-testing";
 import { toUFix64, getAdminAddress, getEvent, getEvents } from "../src/common";
 import { setupCCSTokenOnAccount, mintTokenAndDistribute, getCCSTokenBalance } from "../src/CCSToken";
-import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams } from "../src/Activity";
+import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams, createNewAdmin } from "../src/Activity";
 import { buyBallots, setupBallotOnAccount } from "../src/Ballot";
 import { setupMemorialsOnAccount, getCollectionIds, getCollectionLength, getMemorial, getMemorialsSupply } from "../src/Memorials";
 
@@ -346,6 +346,24 @@ describe("Activity", () => {
 			expect(consumptionUpdatedEvent).not.toBe(null)
 			const eventData = consumptionUpdatedEvent.data
 			expect(eventData.newPrice).toBe(toUFix64(3.0))
+		})
+	})
+
+	it("admin can create new activity admin", async () => {
+		await deployActivity();
+		const Admin = await getAdminAddress();
+		const Alice = await getAccountAddress("Alice");
+		await setupMemorialsOnAccount(Alice)
+
+		await shallResolve(async () => {
+			await createNewAdmin(Alice, Admin)
+		})
+
+		// Alice can create airdrop now
+		await shallResolve(async () => {
+			await createAirdrop(Alice, 'test airdrop', [Alice], toUFix64(5))
+			const result = await getActivity(0)
+			expect(result.closed).toBe(true)
 		})
 	})
 })

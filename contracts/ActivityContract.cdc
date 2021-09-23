@@ -292,6 +292,11 @@ pub contract ActivityContract {
     pub fun updateRewardParameter(_ new: ActivityContract.RewardParameter){
       ActivityContract.rewardParameter = new
     }
+
+    // For business need, admin can create a new activityAdmin resource
+    pub fun createAdmin(): @Admin {
+        return <- create Admin()
+    }
   }
 
   
