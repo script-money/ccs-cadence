@@ -1,10 +1,9 @@
 import path from "path";
 import * as t from "@onflow/types"
-import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert, shallThrow } from "flow-js-testing";
-
-import { toUFix64, getAdminAddress } from "../src/common";
+import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert } from "flow-js-testing";
+import { toUFix64, getAdminAddress, getEvent } from "../src/common";
 import { setupCCSTokenOnAccount, mintTokenAndDistribute, getCCSTokenBalance } from "../src/CCSToken";
-import { deployActivity, createActivity, getCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams } from "../src/Activity";
+import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams } from "../src/Activity";
 import { buyBallots, setupBallotOnAccount } from "../src/Ballot";
 import { setupMemorialsOnAccount, getCollectionIds, getCollectionLength, getMemorial, getMemorialsSupply } from "../src/Memorials";
 
@@ -25,29 +24,35 @@ describe("Activity", () => {
 		return emulator.stop();
 	});
 
+
 	it("people can create an activity by pass CCSToken", async () => {
 		// Deploy contract
 		await shallPass(deployActivity());
 
-		// mint 100 token to alice
+		// mint tokens to users
 		const Alice = await getAccountAddress("Alice");
+		const Bob = await getAccountAddress("Bob");
 		await setupCCSTokenOnAccount(Alice)
+		await setupCCSTokenOnAccount(Bob)
 		const sendToAliceAmount = 100
+		const sendToBobAmount = 0.99
 		const args =
 			[
 				[
-					{ key: Alice, value: toUFix64(sendToAliceAmount) }
+					{ key: Alice, value: toUFix64(sendToAliceAmount) },
+					{ key: Bob, value: toUFix64(sendToBobAmount) }
 				],
 				t.Dictionary({ key: t.Address, value: t.UFix64 }),
 			]
 
 		await shallResolve(async () => {
 			await mintTokenAndDistribute(args)
+			// get create comsuption
 			const consumption = await getCreateConsumption()
 			expect(consumption).toBe(toUFix64(1));
 			// Alice spent token to create activity
 			const result = await createActivity(Alice, 'test activity 01')
-			const activityCreateEvent = result.events.find(event => event.type.includes('activityCreated'))
+			const activityCreateEvent = getEvent(result, 'activityCreated')
 			expect(activityCreateEvent).not.toBe(null)
 			const aliceBalance = await getCCSTokenBalance(Alice);
 			expect(aliceBalance).toBe(toUFix64(sendToAliceAmount - consumption));
@@ -65,13 +70,22 @@ describe("Activity", () => {
 			const activity = await getActivity(0)
 			expect(activity.title).toBe('test activity 01');
 		})
+
+		// if not enough CCS balance, should throw error
+		try {
+			await createActivity(Bob, 'test activity 02')
+		} catch (error) {
+			expect(error.includes('Amount withdrawn must be less than or equal than the balance of the Vault')).toBe(true)
+		}
+
 	});
+
 
 	it("user can vote an activity", async () => {
 		// Deploy contract
 		await shallPass(deployActivity());
 
-		// Send tokens
+		// Send token to users
 		const Alice = await getAccountAddress("Alice");
 		const Bob = await getAccountAddress("Bob");
 		const Chaier = await getAccountAddress("Chaier");
@@ -102,7 +116,13 @@ describe("Activity", () => {
 
 		// Bob vote for activity 0
 		await shallResolve(async () => {
-			await vote(Bob, 0, true)
+			const result = await vote(Bob, 0, true)
+			const activityVotedEvent = getEvent(result, 'activityVoted')
+			expect(activityVotedEvent).not.toBe(null)
+			const eventData = activityVotedEvent.data
+			expect(eventData.id).toBe(0)
+			expect(eventData.voter).toBe(Bob)
+			expect(eventData.isUpVote).toBe(true)
 		})
 
 		// Chaier vote down for activity 0
@@ -123,6 +143,7 @@ describe("Activity", () => {
 		expect(result.creator).toBe(Alice)
 		expect(result.closed).toBe(false)
 	})
+
 
 	it("admin can close activity and mint NFT", async () => {
 		// Deploy contract
@@ -161,11 +182,27 @@ describe("Activity", () => {
 		await setupMemorialsOnAccount(Bob)
 		await setupMemorialsOnAccount(Chaier)
 
-		// admin close Activity
+		// user cannot close activity
+		await shallRevert(async () => {
+			await closeActivity(Alice, 0)
+		})
+
+		// admin close activity
 		await shallResolve(async () => {
-			await closeActivity(Admin, 0)
-			const result = await getActivity(0)
-			expect(result.closed).toBe(true)
+			const result = await closeActivity(Admin, 0)
+			const activityClosedEvent = getEvent(result, 'activityClosed')
+			expect(activityClosedEvent).not.toBe(null)
+			const eventData = activityClosedEvent.data
+			expect(eventData.id).toBe(0)
+			expect(eventData.bonus).toBe(toUFix64(1))
+			expect(eventData.mintPositive).toBe(true)
+			expect(eventData.voteResult).toMatchObject({
+				[Alice]: true,
+				[Bob]: true,
+				[Chaier]: false
+			})
+			const result2 = await getActivity(0)
+			expect(result2.closed).toBe(true)
 		})
 
 		// user vote positive should has memorials
@@ -178,13 +215,13 @@ describe("Activity", () => {
 		const memorialsSupply = await getMemorialsSupply()
 		expect(memorialsSupply).toBe(2)
 
+		// can get memorials information
 		const AliceCollectionIDs = await getCollectionIds(Alice)
 		const AlicememorialID = AliceCollectionIDs.pop()
 		const Alicememorial = await getMemorial(Alice, AlicememorialID)
 		expect(Alicememorial.activityID).toBe(0)
 		expect(Alicememorial.isPositive).toBe(true)
 		expect(Alicememorial.owner).toBe(Alice)
-
 		const BobCollectionIDs = await getCollectionIds(Bob)
 		const BobmemorialID = BobCollectionIDs.pop()
 		const Bobmemorial = await getMemorial(Bob, BobmemorialID)
@@ -192,6 +229,7 @@ describe("Activity", () => {
 		expect(Bobmemorial.isPositive).toBe(true)
 		expect(Bobmemorial.owner).toBe(Bob)
 	})
+
 
 	it("admin can airdrop special NFT to accounts", async () => {
 		await deployActivity();
@@ -201,6 +239,12 @@ describe("Activity", () => {
 		await setupMemorialsOnAccount(Alice)
 		await setupMemorialsOnAccount(Bob)
 
+		// user can not create airdrop
+		await shallRevert(async () => {
+			await createAirdrop(Alice, 'test airdrop 2', [Bob], toUFix64(5))
+		})
+
+		// admin can create airdrop
 		await shallResolve(async () => {
 			await createAirdrop(Admin, 'test airdrop', [Alice, Bob], toUFix64(5))
 			const result = await getActivity(0)
@@ -230,6 +274,7 @@ describe("Activity", () => {
 		expect(Bobmemorial.bonus).toBe(toUFix64(5))
 		expect(Bobmemorial.seriesNumber).toBe(2)
 	})
+
 
 	it("admin can set reward params, user can't", async () => {
 		await deployActivity();
@@ -263,6 +308,24 @@ describe("Activity", () => {
 				averageRatio: toUFix64(1.3),
 				asymmetry: toUFix64(2.0)
 			})
+		})
+	})
+
+
+	it("admin can change activity create comsuption, user can't", async () => {
+		await deployActivity();
+		const Admin = await getAdminAddress();
+		const Alice = await getAccountAddress("Alice");
+		await shallRevert(async () => {
+			await updateCreateConsumption(Alice, toUFix64(2.0))
+		})
+
+		await shallResolve(async () => {
+			const result = await updateCreateConsumption(Admin, toUFix64(3.0))
+			const consumptionUpdatedEvent = getEvent(result, 'consumptionUpdated')
+			expect(consumptionUpdatedEvent).not.toBe(null)
+			const eventData = consumptionUpdatedEvent.data
+			expect(eventData.newPrice).toBe(toUFix64(3.0))
 		})
 	})
 })

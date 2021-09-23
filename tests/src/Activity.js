@@ -31,6 +31,13 @@ export const getCreateConsumption = async () => {
 	return executeScript({ name });
 };
 
+export const updateCreateConsumption = async (account, newPrice) => {
+	const name = "Activity/update_consumption"
+	const args = [newPrice]
+	const signers = [account]
+	return sendTransaction({ name, args, signers })
+}
+
 export const getActivityIds = async () => {
 	const name = "Activity/get_activity_ids";
 	return executeScript({ name });

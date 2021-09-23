@@ -29,7 +29,7 @@ pub fun main(_id: UInt64): ActivityItem? {
       id: item.id,
       upVoteCount: item.upVoteCount,
       downVoteCount: item.downVoteCount,
-      voteResult: item.voteResult,
+      voteResult: item.getVoteResult(),
       creator: item.creator,
       closed: item.closed,
       metadata: item.metadata

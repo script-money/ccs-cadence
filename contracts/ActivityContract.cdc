@@ -12,6 +12,9 @@ pub contract ActivityContract {
   pub var ActivityAdminStoragePath: StoragePath
 
   pub event activityCreated(id:UInt64, title:String, metadata:String, creator:Address)
+  pub event activityVoted(id:UInt64, voter:Address, isUpVote:Bool)
+  pub event activityClosed(id:UInt64, bonus: UFix64, mintPositive: Bool, voteResult:{Address: Bool})
+  pub event consumptionUpdated(newPrice: UFix64)
 
   // all rewardParameter use by off-chain compute
   pub struct RewardParameter{
@@ -36,7 +39,7 @@ pub contract ActivityContract {
     pub var id: UInt64
     pub var upVoteCount: Int
     pub var downVoteCount: Int
-    pub var voteResult: {Address: Bool}
+    access(contract) var voteResult: {Address: Bool}
     pub var creator: Address
     pub var closed: Bool
     pub var metadata: String
@@ -62,6 +65,10 @@ pub contract ActivityContract {
         !self.closed : "activity is closed"
       }
       self.closed = true
+    }
+
+    pub fun getVoteResult(): {Address: Bool}{
+      return self.voteResult
     }
 
     init(_creator: Address, _title: String, metadata: String, preVote: {Address:Bool}?){
@@ -112,6 +119,7 @@ pub contract ActivityContract {
     }else {
       activityRef.downVote(address: voter)
     }
+    emit activityVoted(id:activityId, voter:voter, isUpVote:isUpVote)
     destroy ballot
   }
 
@@ -119,7 +127,7 @@ pub contract ActivityContract {
     // activity should be save in dict
     access(self) var idToActivity: @{UInt64: Activity}
 
-    pub fun deposit(activity: @Activity) {
+    access(contract) fun deposit(activity: @Activity) {
         let oldActivity <- self.idToActivity[activity.id] <- activity
         destroy oldActivity
     }
@@ -128,7 +136,7 @@ pub contract ActivityContract {
       return self.idToActivity.keys
     }
 
-    pub fun borrowActivity(id: UInt64): &Activity? {
+    access(contract) fun borrowActivity(id: UInt64): &Activity? {
       if self.idToActivity.containsKey(id) {
         let activityRef: &Activity = &self.idToActivity[id] as &Activity
         return activityRef
@@ -240,6 +248,8 @@ pub contract ActivityContract {
           }
         }
       }
+
+      emit activityClosed(id:id, bonus:bonus, mintPositive:mintPositive, voteResult: voteDict)
     }
 
     pub fun createAirdrop(title:String, recievers:[Address], bonus:UFix64, metadata: String){
@@ -276,6 +286,7 @@ pub contract ActivityContract {
         new > 0.0 : "new consumption should great than 0"
       }
       ActivityContract.createConsumption = new
+      emit consumptionUpdated(newPrice: new)
     }
 
     pub fun updateRewardParameter(_ new: ActivityContract.RewardParameter){
