@@ -35,7 +35,7 @@ describe("Activity", () => {
 		await setupCCSTokenOnAccount(Alice)
 		await setupCCSTokenOnAccount(Bob)
 		const sendToAliceAmount = 100
-		const sendToBobAmount = 0.99
+		const sendToBobAmount = 99
 		const args =
 			[
 				[
@@ -49,7 +49,7 @@ describe("Activity", () => {
 			await mintTokenAndDistribute(args)
 			// get create comsuption
 			const consumption = await getCreateConsumption()
-			expect(consumption).toBe(toUFix64(1));
+			expect(consumption).toBe(toUFix64(100));
 			// Alice spent token to create activity
 			const result = await createActivity(Alice, 'test activity 01')
 			const activityCreateEvent = getEvent(result, 'activityCreated')

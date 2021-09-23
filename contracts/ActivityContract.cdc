@@ -307,7 +307,9 @@ pub contract ActivityContract {
 
     self.account.save(<-ActivityContract.createEmptyCollection(), to: self.ActivityStoragePath) 
     self.account.link<&ActivityContract.Collection>(self.ActivityPublicPath, target: self.ActivityStoragePath)
-    self.createConsumption = 1.0
+    
+    // set create consumption to 100, equal about 50 ballot CCS token destory amount
+    self.createConsumption = 100.0
   }
 }
  
