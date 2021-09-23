@@ -7,6 +7,16 @@ pub contract Memorials: NonFungibleToken{
   pub event ContractInitialized()
   pub event Withdraw(id: UInt64, from: Address?)
   pub event Deposit(id: UInt64, to: Address?)
+  pub event memorialMinted(
+    reciever: Address,
+    memorialId: UInt64, 
+    seriesNumber: UInt64, 
+    circulatingCount: UInt64, 
+    activityID: UInt64,
+    timestamp: UFix64,
+    isPositive: Bool,
+    bonus: UFix64
+  )
 
   // Named Paths
   //
@@ -192,7 +202,7 @@ pub contract Memorials: NonFungibleToken{
     // Mints a new NFT with information
     // and deposit it in the recipients collection using their collection reference
     //
-    pub fun mintNFT(
+    access(account) fun mintNFT(
       recipient: &{NonFungibleToken.CollectionPublic}, 
       seriesNumber: UInt64,
       circulatingCount: UInt64,
@@ -202,19 +212,31 @@ pub contract Memorials: NonFungibleToken{
       bonus: UFix64,
       metadata: String
     ) {
+      let currentDate = getCurrentBlock().timestamp
+      let currentSupply = Memorials.totalSupply
       let newNFT <- create Memorials.NFT(
         initID: Memorials.totalSupply, 
         seriesNumber: seriesNumber, 
         circulatingCount: circulatingCount, 
         activityID: activityID,
         title:title, 
-        timestamp: getCurrentBlock().timestamp,
+        timestamp: currentDate,
         isPositive: isPositive,
         bonus: bonus,
         metadata: metadata
       )
       recipient.deposit(token: <-newNFT)
-      Memorials.totalSupply = Memorials.totalSupply + (1 as UInt64)
+      emit memorialMinted(
+        reciever: recipient.owner!.address,
+        memorialId: currentSupply, 
+        seriesNumber: seriesNumber, 
+        circulatingCount: circulatingCount, 
+        activityID: activityID,
+        timestamp: currentDate,
+        isPositive: isPositive,
+        bonus: bonus
+      )
+      Memorials.totalSupply = currentSupply + (1 as UInt64)
     }
   }
 

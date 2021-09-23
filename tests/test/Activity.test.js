@@ -1,7 +1,7 @@
 import path from "path";
 import * as t from "@onflow/types"
 import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert } from "flow-js-testing";
-import { toUFix64, getAdminAddress, getEvent } from "../src/common";
+import { toUFix64, getAdminAddress, getEvent, getEvents } from "../src/common";
 import { setupCCSTokenOnAccount, mintTokenAndDistribute, getCCSTokenBalance } from "../src/CCSToken";
 import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams } from "../src/Activity";
 import { buyBallots, setupBallotOnAccount } from "../src/Ballot";
@@ -187,7 +187,7 @@ describe("Activity", () => {
 			await closeActivity(Alice, 0)
 		})
 
-		// admin close activity
+		// admin close activity and emit events
 		await shallResolve(async () => {
 			const result = await closeActivity(Admin, 0)
 			const activityClosedEvent = getEvent(result, 'activityClosed')
@@ -201,6 +201,26 @@ describe("Activity", () => {
 				[Bob]: true,
 				[Chaier]: false
 			})
+
+			const mintNFTEvents = getEvents(result, 'memorialMinted')
+			expect(mintNFTEvents.length).toBe(2)
+			const [nft1, nft2] = mintNFTEvents
+			expect(nft1.data.reciever).toBe(Alice)
+			expect(nft1.data.memorialId).toBe(0)
+			expect(nft1.data.seriesNumber).toBe(1)
+			expect(nft1.data.circulatingCount).toBe(2)
+			expect(nft1.data.activityID).toBe(0)
+			expect(nft1.data.isPositive).toBe(true)
+			expect(nft1.data.bonus).toBe(toUFix64(1))
+
+			expect(nft2.data.reciever).toBe(Bob)
+			expect(nft2.data.memorialId).toBe(1)
+			expect(nft2.data.seriesNumber).toBe(2)
+			expect(nft2.data.circulatingCount).toBe(2)
+			expect(nft2.data.activityID).toBe(0)
+			expect(nft2.data.isPositive).toBe(true)
+			expect(nft2.data.bonus).toBe(toUFix64(1))
+
 			const result2 = await getActivity(0)
 			expect(result2.closed).toBe(true)
 		})
