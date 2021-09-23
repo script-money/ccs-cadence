@@ -307,12 +307,18 @@ describe("Activity", () => {
 		expect(rewardParams.asymmetry).toBe(toUFix64(2))
 
 		await shallResolve(async () => {
-			await updateRewardParams(Admin, {
+			const result = await updateRewardParams(Admin, {
 				maxRatio: toUFix64(6),
 				minRatio: toUFix64(1.1),
 				averageRatio: toUFix64(1.3),
 				asymmetry: toUFix64(2.0)
 			})
+			const event = getEvent(result, 'rewardParameterUpdated')
+			const newParams = event.data.newParams
+			expect(newParams.maxRatio).toBe(toUFix64(6))
+			expect(newParams.minRatio).toBe(toUFix64(1.1))
+			expect(newParams.averageRatio).toBe(toUFix64(1.3))
+			expect(newParams.asymmetry).toBe(toUFix64(2.0))
 		})
 
 		const rewardParams2 = await getRewardParams()

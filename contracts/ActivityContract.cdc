@@ -15,6 +15,7 @@ pub contract ActivityContract {
   pub event activityVoted(id:UInt64, voter:Address, isUpVote:Bool)
   pub event activityClosed(id:UInt64, bonus: UFix64, mintPositive: Bool, voteResult:{Address: Bool})
   pub event consumptionUpdated(newPrice: UFix64)
+  pub event rewardParameterUpdated(newParams: RewardParameter)
 
   // all rewardParameter use by off-chain compute
   pub struct RewardParameter{
@@ -291,6 +292,7 @@ pub contract ActivityContract {
 
     pub fun updateRewardParameter(_ new: ActivityContract.RewardParameter){
       ActivityContract.rewardParameter = new
+      emit rewardParameterUpdated(newParams: new)
     }
 
     // For business need, admin can create a new activityAdmin resource
