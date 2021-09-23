@@ -45,7 +45,7 @@ transaction {
         acct.save(<-BallotContract.createEmptyCollection(), to: BallotContract.CollectionStoragePath)
       }
       acct.unlink(BallotContract.CollectionPublicPath)
-      acct.link<&BallotContract.Collection>(BallotContract.CollectionPublicPath,target: BallotContract.CollectionStoragePath)
+      acct.link<&BallotContract.Collection{BallotContract.CollectionPublic}>(BallotContract.CollectionPublicPath,target: BallotContract.CollectionStoragePath)
     }
 
     if !hasMomerials(acct.address) {

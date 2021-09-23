@@ -8,24 +8,35 @@ pub contract BallotContract {
   pub var CollectionPublicPath: PublicPath
   pub var AdminStoragePath: StoragePath
 
+  pub event ballotsBought(amount: Int, buyer: Address)
+  pub event priceUpdated(newPrice: UFix64)
+
   pub resource Ballot {
 
   }
 
-  pub resource Collection{
-    pub var ownedBallots: @[Ballot]
+  pub resource interface CollectionPublic{
+    pub fun getAmount(): Int
+  }
+
+  pub resource Collection: CollectionPublic{
+    access(self) var ownedBallots: @[Ballot]
 
     pub fun getAmount(): Int {
       return self.ownedBallots.length
     }
 
     pub fun save(ballots: @[Ballot]){
+      pre{
+        ballots.length >= 1: "ballots length should be at least 1 when save"
+      }
       var i = 0
       let fixLength = ballots.length
       while i < fixLength {
         self.ownedBallots.append(<- ballots.removeFirst()) 
         i = i + 1
       }
+      emit ballotsBought(amount: fixLength, buyer: self.ownedBallots[0].owner!.address)
       destroy ballots
     }
 
@@ -47,8 +58,9 @@ pub contract BallotContract {
 
   pub fun buyBallots(amount: Int, buyTokens: @FungibleToken.Vault): @[Ballot]{
     pre {
+      amount >= 1: "Should buy at least 1 ballot"
       buyTokens.isInstance(Type<@CCSToken.Vault>()):
-        "Only Flow Tokens are supported for purchase."
+        "Only Flow Tokens are supported for purchase"
       buyTokens.balance == BallotContract.price * UFix64(amount)
         : "Send vault must same as ballot price * amount"
     }
@@ -75,6 +87,8 @@ pub contract BallotContract {
         newPrice >= 0.0: "price should greate than 0"
       }
       BallotContract.price = newPrice
+
+      emit priceUpdated(newPrice: newPrice)
     }
   } 
 
@@ -83,6 +97,7 @@ pub contract BallotContract {
     self.price = 1.0
     self.CollectionStoragePath = /storage/BallotCollectionStoragePath
     self.CollectionPublicPath = /public/BallotCollectionPublicPath
+
     self.AdminStoragePath = /storage/BallotCollectionAdminStoragePath
 
     let admin <- create Admin()

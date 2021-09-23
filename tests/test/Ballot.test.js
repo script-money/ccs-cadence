@@ -1,7 +1,7 @@
 import path from "path";
 import * as t from "@onflow/types"
-import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert } from "flow-js-testing";
-import { toUFix64, getAdminAddress } from "../src/common";
+import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert, shallThrow } from "flow-js-testing";
+import { toUFix64, getAdminAddress, getEvent } from "../src/common";
 
 import { deployBallot, buyBallots, getHoldings, setupBallotOnAccount, getSoldAmount, setPrice, getPrice } from "../src/Ballot";
 import { setupCCSTokenOnAccount, mintTokenAndDistribute } from "../src/CCSToken";
@@ -32,20 +32,34 @@ describe("Activity", () => {
 		const Admin = await getAdminAddress()
 		const Alice = await getAccountAddress("Alice")
 
+		// can read ballot price
 		await shallResolve(async () => {
 			const price = await getPrice()
 			expect(price).toEqual(toUFix64(1))
 		})
 
+		// admin can set new price and emit event
 		await shallResolve(async () => {
-			await setPrice(toUFix64(2), Admin)
+			const result = await setPrice(toUFix64(2), Admin)
+			const evenData = getEvent(result, 'priceUpdated')
+			expect(evenData.data.newPrice).toBe(toUFix64(2))
 			const price = await getPrice()
 			expect(price).toEqual(toUFix64(2))
 		})
 
-		// another can not set ballot price
+		// user can not set ballot price
 		await shallRevert(async () => {
 			await setPrice(toUFix(3), Alice)
+		})
+
+		// can not set same price
+		await shallRevert(async () => {
+			await setPrice(toUFix(2), Admin)
+		})
+
+		// can not set price to 0
+		await shallRevert(async () => {
+			await setPrice(toUFix(0), Admin)
 		})
 	})
 
@@ -72,10 +86,23 @@ describe("Activity", () => {
 
 		// Alice can buy a ballot
 		await shallResolve(async () => {
-			await buyBallots(Alice, 1)
+			const result = await buyBallots(Alice, 1)
+			const evenData = getEvent(result, 'ballotsBought')
+			expect(evenData.data.amount).toBe(1)
+			expect(evenData.data.buyer).toBe(Alice)
 		})
 
-		// Alice can buy more ballots, price is 0.0
+		// can not buy 0 ballot
+		await shallRevert(async () => {
+			await buyBallots(Alice, 0)
+		})
+
+		// can not buy no enough token
+		await shallRevert(async () => {
+			await buyBallots(Alice, 1000)
+		})
+
+		// Alice can buy more ballots
 		await shallResolve(async () => {
 			await buyBallots(Alice, 14)
 		})
