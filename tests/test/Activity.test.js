@@ -335,6 +335,57 @@ describe("Activity", () => {
 				asymmetry: toUFix64(2.0)
 			})
 		})
+
+		// new.minRatio >= 1.0: "minRatio should gte 1.0"
+		await shallRevert(async () => {
+			await updateRewardParams(Admin, {
+				maxRatio: toUFix64(6),
+				minRatio: toUFix64(0.9),
+				averageRatio: toUFix64(1.3),
+				asymmetry: toUFix64(2.0)
+			})
+		})
+
+		// new.maxRatio > new.minRatio: "maxRatio should greater than minRatio"
+		await shallRevert(async () => {
+			await updateRewardParams(Admin, {
+				maxRatio: toUFix64(1.09),
+				minRatio: toUFix64(1.1),
+				averageRatio: toUFix64(1.3),
+				asymmetry: toUFix64(2.0)
+			})
+		})
+
+		// new.averageRatio > new.minRatio: "averageRatio should gt minRatio"
+		await shallRevert(async () => {
+			await updateRewardParams(Admin, {
+				maxRatio: toUFix64(6),
+				minRatio: toUFix64(1.1),
+				averageRatio: toUFix64(1.09),
+				asymmetry: toUFix64(2.0)
+			})
+		})
+
+		// new.averageRatio < new.maxRatio: "averageRatio should lt maxRatio"
+		await shallRevert(async () => {
+			await updateRewardParams(Admin, {
+				maxRatio: toUFix64(6),
+				minRatio: toUFix64(1.1),
+				averageRatio: toUFix64(6.5),
+				asymmetry: toUFix64(2.0)
+			})
+		})
+
+		// new.asymmetry > 0.0: "asymmetry should greater than 0"
+		await shallRevert(async () => {
+			await updateRewardParams(Admin, {
+				maxRatio: toUFix64(6),
+				minRatio: toUFix64(1.1),
+				averageRatio: toUFix64(1.3),
+				asymmetry: toUFix64(0.0)
+			})
+		})
+
 	})
 
 

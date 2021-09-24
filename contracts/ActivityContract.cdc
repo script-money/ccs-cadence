@@ -291,6 +291,13 @@ pub contract ActivityContract {
     }
 
     pub fun updateRewardParameter(_ new: ActivityContract.RewardParameter){
+      pre{
+        new.minRatio >= 1.0: "minRatio should gte 1.0"
+        new.maxRatio > new.minRatio: "maxRatio should greater than minRatio"
+        new.averageRatio > new.minRatio: "averageRatio should gt minRatio"
+        new.averageRatio < new.maxRatio: "averageRatio should lt maxRatio"
+        new.asymmetry > 0.0: "asymmetry should greater than 0"
+      }
       ActivityContract.rewardParameter = new
       emit rewardParameterUpdated(newParams: new)
     }
