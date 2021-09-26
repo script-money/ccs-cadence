@@ -8,7 +8,6 @@ pub struct MemorialItem {
   pub let circulatingCount: UInt64
   pub let activityID: UInt64
   pub let title: String
-  pub let timestamp: UFix64
   pub let isPositive: Bool
   pub let bonus: UFix64
   pub let metadata: String
@@ -16,15 +15,14 @@ pub struct MemorialItem {
   pub let owner: Address
 
   init(id: UInt64, version: UInt8, seriesNumber: UInt64, circulatingCount: UInt64, 
-    activityID: UInt64, title: String, timestamp: UFix64, isPositive: Bool, 
-    bonus: UFix64, metadata: String, resourceID: UInt64,  owner: Address) {
+    activityID: UInt64, title: String, isPositive: Bool, 
+    bonus: UFix64, metadata: String, resourceID: UInt64, owner: Address) {
     self.id = id
     self.version = version
     self.seriesNumber = seriesNumber
     self.circulatingCount = circulatingCount
     self.activityID = activityID
     self.title = title
-    self.timestamp = timestamp
     self.isPositive = isPositive
     self.bonus = bonus
     self.metadata = metadata
@@ -43,7 +41,6 @@ pub fun main(address: Address, itemID: UInt64): MemorialItem? {
         circulatingCount: item.circulatingCount,
         activityID: item.activityID,
         title: item.title,
-        timestamp: item.timestamp,
         isPositive: item.isPositive, 
         bonus: item.bonus,
         metadata: item.metadata,

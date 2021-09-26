@@ -8,12 +8,12 @@ pub contract Memorials: NonFungibleToken{
   pub event Withdraw(id: UInt64, from: Address?)
   pub event Deposit(id: UInt64, to: Address?)
   pub event memorialMinted(
+    version: UInt8,
     reciever: Address,
     memorialId: UInt64, 
     seriesNumber: UInt64, 
     circulatingCount: UInt64, 
     activityID: UInt64,
-    timestamp: UFix64,
     isPositive: Bool,
     bonus: UFix64
   )
@@ -41,7 +41,6 @@ pub contract Memorials: NonFungibleToken{
       pub let circulatingCount: UInt64
       pub let activityID: UInt64
       pub let title: String
-      pub let timestamp: UFix64
       pub let isPositive: Bool
       pub let bonus: UFix64
       pub let metadata: String
@@ -51,8 +50,7 @@ pub contract Memorials: NonFungibleToken{
       init(
         initID: UInt64, seriesNumber:UInt64, 
         circulatingCount: UInt64, activityID: UInt64, 
-        title:String, timestamp: UFix64,
-        isPositive: Bool, bonus:UFix64,
+        title:String, isPositive: Bool, bonus:UFix64,
         metadata: String
       ) {
         self.id = initID
@@ -61,7 +59,6 @@ pub contract Memorials: NonFungibleToken{
         self.seriesNumber = seriesNumber
         self.circulatingCount = circulatingCount
         self.title = title
-        self.timestamp = timestamp
         self.isPositive = isPositive
         self.bonus = bonus
         self.metadata = metadata
@@ -212,27 +209,25 @@ pub contract Memorials: NonFungibleToken{
       bonus: UFix64,
       metadata: String
     ) {
-      let currentDate = getCurrentBlock().timestamp
       let currentSupply = Memorials.totalSupply
       let newNFT <- create Memorials.NFT(
-        initID: Memorials.totalSupply, 
+        initID: Memorials.totalSupply + 1, 
         seriesNumber: seriesNumber, 
         circulatingCount: circulatingCount, 
         activityID: activityID,
         title:title, 
-        timestamp: currentDate,
         isPositive: isPositive,
         bonus: bonus,
         metadata: metadata
       )
       recipient.deposit(token: <-newNFT)
       emit memorialMinted(
+        version: Memorials.version,
         reciever: recipient.owner!.address,
         memorialId: currentSupply, 
         seriesNumber: seriesNumber, 
         circulatingCount: circulatingCount, 
         activityID: activityID,
-        timestamp: currentDate,
         isPositive: isPositive,
         bonus: bonus
       )
