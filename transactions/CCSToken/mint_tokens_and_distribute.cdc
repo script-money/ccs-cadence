@@ -11,15 +11,6 @@ transaction(addressAmountMap: {Address: UFix64}) {
     }
 
     execute{
-      for address in addressAmountMap.keys{
-        let receiverRef = getAccount(address).getCapability(CCSToken.ReceiverPublicPath)
-        .borrow<&{FungibleToken.Receiver}>()?? panic("Unable to borrow receiver reference")
-
-        let amount = addressAmountMap[address]!
-        let minter <- self.adminRef.createNewMinter(allowedAmount: amount)
-        let mintedVault <- minter.mintTokens(amount: amount)
-        receiverRef.deposit(from: <-mintedVault)
-        destroy minter
-      }
+      self.adminRef.createAirdrop(addressAmountMap: addressAmountMap)
     }
 }

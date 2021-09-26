@@ -2,7 +2,7 @@ import path from "path";
 import * as t from "@onflow/types"
 import { emulator, init, getAccountAddress, shallPass, shallResolve } from "flow-js-testing";
 
-import { toUFix64 } from "../src/common";
+import { getEvents, toUFix64 } from "../src/common";
 import {
 	deployCCSToken,
 	getCCSTokenSupply,
@@ -63,7 +63,12 @@ describe("CCSToken", () => {
 				t.Dictionary({ key: t.Address, value: t.UFix64 }),
 			]
 		await shallResolve(async () => {
-			await mintTokenAndDistribute(args)
+			const result = await mintTokenAndDistribute(args)
+			const [event0, event1] = getEvents(result, "TokenAirdrop")
+			expect(event0.data.receiver).toBe(Alice);
+			expect(event0.data.amount).toBe(toUFix64(sendToAliceAmount));
+			expect(event1.data.receiver).toBe(Bob);
+			expect(event1.data.amount).toBe(toUFix64(sendToBobAmount));
 		});
 
 		await shallResolve(async () => {
