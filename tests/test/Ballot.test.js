@@ -40,9 +40,7 @@ describe("Activity", () => {
 
 		// admin can set new price and emit event
 		await shallResolve(async () => {
-			const result = await setPrice(toUFix64(2), Admin)
-			const evenData = getEvent(result, 'priceUpdated')
-			expect(evenData.data.newPrice).toBe(toUFix64(2))
+			await setPrice(toUFix64(2), Admin)
 			const price = await getPrice()
 			expect(price).toEqual(toUFix64(2))
 		})
@@ -90,6 +88,7 @@ describe("Activity", () => {
 			const evenData = getEvent(result, 'ballotsBought')
 			expect(evenData.data.amount).toBe(1)
 			expect(evenData.data.buyer).toBe(Alice)
+			expect(evenData.data.price).toBe(toUFix64(1))
 		})
 
 		// can not buy 0 ballot

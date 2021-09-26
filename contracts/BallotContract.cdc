@@ -8,8 +8,7 @@ pub contract BallotContract {
   pub var CollectionPublicPath: PublicPath
   pub var AdminStoragePath: StoragePath
 
-  pub event ballotsBought(amount: Int, buyer: Address)
-  pub event priceUpdated(newPrice: UFix64)
+  pub event ballotsBought(amount: Int, buyer: Address, price: UFix64)
 
   pub resource Ballot {
 
@@ -36,7 +35,7 @@ pub contract BallotContract {
         self.ownedBallots.append(<- ballots.removeFirst()) 
         i = i + 1
       }
-      emit ballotsBought(amount: fixLength, buyer: self.ownedBallots[0].owner!.address)
+      emit ballotsBought(amount: fixLength, buyer: self.ownedBallots[0].owner!.address, price: BallotContract.price)
       destroy ballots
     }
 
@@ -87,8 +86,6 @@ pub contract BallotContract {
         newPrice >= 0.0: "price should greate than 0"
       }
       BallotContract.price = newPrice
-
-      emit priceUpdated(newPrice: newPrice)
     }
   } 
 
