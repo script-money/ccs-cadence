@@ -18,7 +18,7 @@ pub fun hasCCSToken(_ address: Address): Bool {
 
 pub fun hasBallot(_ address: Address): Bool {
   return getAccount(address)
-    .getCapability<&BallotContract.Collection>(BallotContract.CollectionPublicPath)
+    .getCapability<&BallotContract.Collection{BallotContract.CollectionPublic}>(BallotContract.CollectionPublicPath)
     .check()
 }
 
