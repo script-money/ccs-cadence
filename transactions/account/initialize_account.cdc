@@ -42,7 +42,7 @@ transaction {
 
     if !hasBallot(acct.address) {
       if acct.borrow<&BallotContract.Collection>(from: BallotContract.CollectionStoragePath) == nil {
-        acct.save(<-BallotContract.createEmptyCollection(), to: BallotContract.CollectionStoragePath)
+        acct.save(<-BallotContract.createEmptyCollection(acct.address), to: BallotContract.CollectionStoragePath)
       }
       acct.unlink(BallotContract.CollectionPublicPath)
       acct.link<&BallotContract.Collection{BallotContract.CollectionPublic}>(BallotContract.CollectionPublicPath,target: BallotContract.CollectionStoragePath)

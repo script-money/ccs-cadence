@@ -79,7 +79,10 @@ describe("Activity", () => {
 
 		// privision ballot storage
 		await shallResolve(async () => {
-			await setupBallotOnAccount(Alice)
+			const result = await setupBallotOnAccount(Alice)
+			const event = getEvent(result, 'ballotPrepared')
+			const address = event.data.address
+			expect(address).toBe(Alice)
 		})
 
 		// Alice can buy a ballot

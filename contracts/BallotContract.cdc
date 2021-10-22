@@ -9,6 +9,7 @@ pub contract BallotContract {
   pub var AdminStoragePath: StoragePath
 
   pub event ballotsBought(amount: Int, buyer: Address, price: UFix64)
+  pub event ballotPrepared(address: Address)
 
   pub resource Ballot {
 
@@ -75,7 +76,8 @@ pub contract BallotContract {
     return <- ballots
   }
 
-  pub fun createEmptyCollection(): @Collection{
+  pub fun createEmptyCollection(_ address: Address): @Collection{
+    emit ballotPrepared(address: address)
     return <- create Collection()
   }
 
