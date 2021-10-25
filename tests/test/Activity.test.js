@@ -206,7 +206,14 @@ describe("Activity", () => {
 			expect(mintNFTEvents.length).toBe(2)
 			const [nft1, nft2] = mintNFTEvents
 			expect(nft1.data.reciever).toBe(Alice)
-			expect(nft1.data.memorialId).toBe(0)
+
+			const aliceIds = await getCollectionIds(Alice)
+			expect(aliceIds.includes(nft1.data.memorialId)).toBe(true)
+			expect(nft1.data.memorialId).toBe(1)
+			const depositEvents = getEvents(result, 'Deposit')
+			expect(depositEvents.length).toBe(2)
+			const [nftToAlice, nftToBob] = depositEvents
+			expect(aliceIds.includes(nftToAlice.data.id)).toBe(true)
 			expect(nft1.data.seriesNumber).toBe(1)
 			expect(nft1.data.circulatingCount).toBe(2)
 			expect(nft1.data.activityID).toBe(0)
@@ -214,7 +221,10 @@ describe("Activity", () => {
 			expect(nft1.data.bonus).toBe(toUFix64(1))
 
 			expect(nft2.data.reciever).toBe(Bob)
-			expect(nft2.data.memorialId).toBe(1)
+			const bobIds = await getCollectionIds(Bob)
+			expect(bobIds.includes(nft2.data.memorialId)).toBe(true)
+			expect(nft2.data.memorialId).toBe(2)
+			expect(bobIds.includes(nftToBob.data.id)).toBe(true)
 			expect(nft2.data.seriesNumber).toBe(2)
 			expect(nft2.data.circulatingCount).toBe(2)
 			expect(nft2.data.activityID).toBe(0)

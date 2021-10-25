@@ -200,22 +200,22 @@ pub contract Memorials: NonFungibleToken{
     // and deposit it in the recipients collection using their collection reference
     //
     access(account) fun mintNFT(
-      recipient: &{NonFungibleToken.CollectionPublic}, 
+      recipient: &{NonFungibleToken.CollectionPublic},
       seriesNumber: UInt64,
       circulatingCount: UInt64,
-      activityID: UInt64, 
-      title: String, 
+      activityID: UInt64,
+      title: String,
       isPositive: Bool,
       bonus: UFix64,
       metadata: String
     ) {
-      let currentSupply = Memorials.totalSupply
+      let toBeMintID = Memorials.totalSupply + 1
       let newNFT <- create Memorials.NFT(
-        initID: Memorials.totalSupply + 1, 
-        seriesNumber: seriesNumber, 
-        circulatingCount: circulatingCount, 
+        initID: toBeMintID,
+        seriesNumber: seriesNumber,
+        circulatingCount: circulatingCount,
         activityID: activityID,
-        title:title, 
+        title:title,
         isPositive: isPositive,
         bonus: bonus,
         metadata: metadata
@@ -224,14 +224,14 @@ pub contract Memorials: NonFungibleToken{
       emit memorialMinted(
         version: Memorials.version,
         reciever: recipient.owner!.address,
-        memorialId: currentSupply, 
-        seriesNumber: seriesNumber, 
-        circulatingCount: circulatingCount, 
+        memorialId: toBeMintID,
+        seriesNumber: seriesNumber,
+        circulatingCount: circulatingCount,
         activityID: activityID,
         isPositive: isPositive,
         bonus: bonus
       )
-      Memorials.totalSupply = currentSupply + (1 as UInt64)
+      Memorials.totalSupply = toBeMintID
     }
   }
 
