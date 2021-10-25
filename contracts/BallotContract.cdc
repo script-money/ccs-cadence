@@ -84,7 +84,6 @@ pub contract BallotContract {
   pub resource Admin {
     pub fun setPrice(newPrice: UFix64){
       pre {
-        newPrice != BallotContract.price : "new price should not same with old price"
         newPrice >= 0.0: "price should greate than 0"
       }
       BallotContract.price = newPrice
