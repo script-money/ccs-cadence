@@ -29,7 +29,14 @@ pub contract Memorials: NonFungibleToken{
   //
   pub var totalSupply: UInt64
 
+  // version
+  // use version to control behaviour
+  //
   pub var version: UInt8
+
+  // initVotingPower
+  // use for compute votingPower
+  priv var initVotingPower: UFix64
 
   // NFT
   // A Memorial as an NFT
@@ -149,7 +156,7 @@ pub contract Memorials: NonFungibleToken{
     // getVotingPower
     // every memorial has bonus, Sum(unique memorial bonus) + 1.0 = voting power
     pub fun getVotingPower(): UFix64{
-      var votingPower = 1.0
+      var votingPower = Memorials.initVotingPower
       if self.ownedNFTs.length == 0 {
         return votingPower
       }
@@ -259,6 +266,8 @@ pub contract Memorials: NonFungibleToken{
 
     // Initialize the total supply
     self.totalSupply = 0
+
+    self.initVotingPower = 0.01
 
     // Create a Minter resource and save it to storage
     let minter <- create NFTMinter()
