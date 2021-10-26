@@ -93,10 +93,10 @@ pub contract BallotContract {
   init(){
     self.supply = 0
     self.price = 1.0
-    self.CollectionStoragePath = /storage/BallotCollectionStoragePath
-    self.CollectionPublicPath = /public/BallotCollectionPublicPath
+    self.CollectionStoragePath = /storage/BallotCollectionStoragePath_01
+    self.CollectionPublicPath = /public/BallotCollectionPublicPath_01
 
-    self.AdminStoragePath = /storage/BallotCollectionAdminStoragePath
+    self.AdminStoragePath = /storage/BallotCollectionAdminStoragePath_01
 
     let admin <- create Admin()
     self.account.save(<-admin, to: self.AdminStoragePath)

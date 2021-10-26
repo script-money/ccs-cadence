@@ -92,10 +92,10 @@ pub contract CCSToken: FungibleToken {
   
 
     init() {
-      self.VaultStoragePath = /storage/CCSVault
-      self.ReceiverPublicPath = /public/CCSReceiver
-      self.BalancePublicPath = /public/CCSBalance
-      self.AdminStoragePath = /storage/CCSAdmin
+      self.VaultStoragePath = /storage/CCSVault_01
+      self.ReceiverPublicPath = /public/CCSReceiver_01
+      self.BalancePublicPath = /public/CCSBalance_01
+      self.AdminStoragePath = /storage/CCSAdmin_01
 
       self.totalSupply = 0.0
 

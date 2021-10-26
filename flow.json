@@ -34,6 +34,10 @@
     "emulator-account": {
       "address": "f8d6e0586b0a20c7",
       "key": "b81f810b001fb1de81312e0472e7353514ef2128a840e2c3e9a68840428b08e8"
+    },
+    "testnet-account": {
+      "address": "${TESTNET_ACCOUNT}",
+      "key": "${TESTNET_PRIVATE_KEY}"
     }
   },
   "deployments": {
@@ -44,6 +48,14 @@
         "CCSToken",
         "Memorials",
         "NonFungibleToken"
+      ]
+    },
+    "testnet": {
+      "testnet-account": [
+        "ActivityContract",
+        "BallotContract",
+        "CCSToken",
+        "Memorials"
       ]
     }
   }

@@ -312,9 +312,9 @@ pub contract ActivityContract {
   init(){
     self.totalSupply = 0
     self.rewardParameter = RewardParameter(maxRatio:5.0, minRatio:1.0, averageRatio:1.5, asymmetry: 2.0)
-    self.ActivityStoragePath = /storage/ActivitiesCollection
-    self.ActivityPublicPath = /public/ActivitiesCollection
-    self.ActivityAdminStoragePath = /storage/ActivityAdmin
+    self.ActivityStoragePath = /storage/ActivitiesCollection_01
+    self.ActivityPublicPath = /public/ActivitiesCollection_01
+    self.ActivityAdminStoragePath = /storage/ActivityAdmin_01
 
     let admin <- create Admin()
     self.account.save(<-admin, to: self.ActivityAdminStoragePath)

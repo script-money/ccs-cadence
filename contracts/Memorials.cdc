@@ -260,9 +260,9 @@ pub contract Memorials: NonFungibleToken{
 
   init() {
     // Set our named paths
-    self.CollectionStoragePath = /storage/memorialssCollection
-    self.CollectionPublicPath = /public/memorialssCollection
-    self.MinterStoragePath = /storage/memorialssMinter
+    self.CollectionStoragePath = /storage/memorialssCollection_01
+    self.CollectionPublicPath = /public/memorialssCollection_01
+    self.MinterStoragePath = /storage/memorialssMinter_01
 
     // Initialize the total supply
     self.totalSupply = 0
