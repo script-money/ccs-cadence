@@ -1,8 +1,6 @@
 import NonFungibleToken from "../../contracts/NonFungibleToken.cdc"
 import Memorials from "../../contracts/Memorials.cdc"
 
-// This transaction configures an account to hold Kitty Items.
-
 transaction {
     prepare(signer: AuthAccount) {
         // if the account doesn't already have a collection

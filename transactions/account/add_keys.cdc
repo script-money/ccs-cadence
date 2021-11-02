@@ -1,3 +1,4 @@
+// This transaction use for add new key to account for key rotation
 transaction(publicKey: String) {
     prepare(signer: AuthAccount) {
 

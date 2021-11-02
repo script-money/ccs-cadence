@@ -1,12 +1,16 @@
 import NonFungibleToken from "./NonFungibleToken.cdc"
 
 pub contract Memorials: NonFungibleToken{
-
-  // Events
-  //
+  // event when Memorials contract is deployed
   pub event ContractInitialized()
+
+  // The event that is emitted when memorial are withdrawn from a collection
   pub event Withdraw(id: UInt64, from: Address?)
+
+  // The event that is emitted when memorial are deposit from a collection
   pub event Deposit(id: UInt64, to: Address?)
+
+  // The event that is emitted when memorial are minted
   pub event memorialMinted(
     version: UInt8,
     reciever: Address,
@@ -25,22 +29,21 @@ pub contract Memorials: NonFungibleToken{
   pub let MinterStoragePath: StoragePath
 
   // totalSupply
-  // The total number of Memorials that have been minted
   //
+  // The total number of Memorials that have been minted
   pub var totalSupply: UInt64
 
   // version
-  // use version to control behaviour
   //
+  // use version to control behaviour, upgrade in future
   pub var version: UInt8
 
-  // initVotingPower
   // use for compute votingPower
   priv var initVotingPower: UFix64
 
   // NFT
+  // 
   // A Memorial as an NFT
-  //
   pub resource NFT: NonFungibleToken.INFT {
       pub let id: UInt64
       pub let version: UInt8
@@ -90,15 +93,16 @@ pub contract Memorials: NonFungibleToken{
     pub fun getVotingPower(): UFix64
   }
 
+  // Collection
+  //
+  // collection for user managing his/her ballots, should implement MemorialsCollectionPublic and interfaces in NonFungibleToken
   pub resource Collection: MemorialsCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
     // dictionary of NFT conforming tokens
-    // NFT is a resource type with an `UInt64` ID field
-    //
     pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
 
     // withdraw
-    // Removes an NFT from the collection and moves it to the caller
     //
+    // Removes an NFT from the collection and moves it to the caller
     pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
         let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("missing NFT")
 
@@ -108,9 +112,9 @@ pub contract Memorials: NonFungibleToken{
     }
 
     // deposit
+    //
     // Takes a NFT and adds it to the collections dictionary
     // and adds the ID to the id array
-    //
     pub fun deposit(token: @NonFungibleToken.NFT) {
         let token <- token as! @Memorials.NFT
 
@@ -125,25 +129,25 @@ pub contract Memorials: NonFungibleToken{
     }
 
     // getIDs
+    // 
     // Returns an array of the IDs that are in the collection
-    //
     pub fun getIDs(): [UInt64] {
         return self.ownedNFTs.keys
     }
 
     // borrowNFT
+    //
     // Gets a reference to an NFT in the collection
     // so that the caller can read its metadata and call its methods
-    //
     pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
         return &self.ownedNFTs[id] as &NonFungibleToken.NFT
     }
 
     // borrowMemorials
+    //
     // Gets a reference to an NFT in the collection as a Memorials,
     // exposing all of its fields
     // This is safe as there are no functions that can be called on the Memorials.
-    //
     pub fun borrowMemorial(id: UInt64): &Memorials.NFT? {
         if self.ownedNFTs[id] != nil {
             let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT
@@ -154,8 +158,11 @@ pub contract Memorials: NonFungibleToken{
     }
 
     // getVotingPower
-    // every memorial has bonus, Sum(unique memorial bonus) + 1.0 = voting power
+    //
+    // every memorial has bonus, SUM(unique memorial bonus) + 0.01 = voting power
+    // This function is not commonly used, can get voting power from off-chain database
     pub fun getVotingPower(): UFix64{
+      // the initial voting power is 0.01
       var votingPower = Memorials.initVotingPower
       if self.ownedNFTs.length == 0 {
         return votingPower
@@ -176,14 +183,12 @@ pub contract Memorials: NonFungibleToken{
       return votingPower
     }
     
-
     // destructor
     destroy() {
         destroy self.ownedNFTs
     }
 
     // initializer
-    //
     init () {
         self.ownedNFTs <- {}
     }
@@ -191,21 +196,22 @@ pub contract Memorials: NonFungibleToken{
 
   
   // createEmptyCollection
-  // public function that anyone can call to create a new empty collection
   //
+  // public function that anyone can call to create a new empty collection
   pub fun createEmptyCollection(): @NonFungibleToken.Collection {
     return <- create Collection()
   }
 
   // NFTMinter
+  //
   // Resource that an admin or something similar would own to be
   // able to mint new NFTs
-  //
   pub resource NFTMinter {
     // mintNFT
+    //
     // Mints a new NFT with information
     // and deposit it in the recipients collection using their collection reference
-    //
+    // only can invoke by activityContract
     access(account) fun mintNFT(
       recipient: &{NonFungibleToken.CollectionPublic},
       seriesNumber: UInt64,
@@ -216,7 +222,9 @@ pub contract Memorials: NonFungibleToken{
       bonus: UFix64,
       metadata: String
     ) {
+      // new ID should supply + 1
       let toBeMintID = Memorials.totalSupply + 1
+      // create new memorials NFT
       let newNFT <- create Memorials.NFT(
         initID: toBeMintID,
         seriesNumber: seriesNumber,
@@ -227,6 +235,7 @@ pub contract Memorials: NonFungibleToken{
         bonus: bonus,
         metadata: metadata
       )
+      // send to recipient
       recipient.deposit(token: <-newNFT)
       emit memorialMinted(
         version: Memorials.version,
@@ -238,6 +247,7 @@ pub contract Memorials: NonFungibleToken{
         isPositive: isPositive,
         bonus: bonus
       )
+      // update totalsupply
       Memorials.totalSupply = toBeMintID
     }
   }
@@ -259,20 +269,23 @@ pub contract Memorials: NonFungibleToken{
   }
 
   init() {
-    // Set our named paths
-    self.CollectionStoragePath = /storage/memorialssCollection_01
-    self.CollectionPublicPath = /public/memorialssCollection_01
-    self.MinterStoragePath = /storage/memorialssMinter_01
+    // Set our named paths.
+    // remove _x when mainnet deploy
+    self.CollectionStoragePath = /storage/memorialssCollection_0
+    self.CollectionPublicPath = /public/memorialssCollection_0
+    self.MinterStoragePath = /storage/memorialssMinter_0
 
     // Initialize the total supply
     self.totalSupply = 0
 
+    // Initialize voting power, use for caculate user's voting power, does not commonly use
     self.initVotingPower = 0.01
 
     // Create a Minter resource and save it to storage
     let minter <- create NFTMinter()
     self.account.save(<-minter, to: self.MinterStoragePath)
 
+    // Initialize version
     self.version = 1
     emit ContractInitialized()
   }
