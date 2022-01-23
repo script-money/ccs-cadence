@@ -18,6 +18,7 @@ pub contract ActivityContract {
   pub var ActivityStoragePath : StoragePath
   pub var ActivityPublicPath: PublicPath
   pub var ActivityAdminStoragePath: StoragePath
+  pub var ActivityModeratorStoragePath: StoragePath
 
   // activityCreated
   //
@@ -320,7 +321,7 @@ pub contract ActivityContract {
 
   // admin
   //
-  // Admin can closeActivity, create airdrop, update consumption, update reward parameter and create new admin
+  // Admin can update consumption, update reward parameter and create new moderator
   pub resource Admin {
     // close activity by id, bonus and mintPositive are computed off blockchain
     pub fun closeActivity(activityId id: UInt64, bonus: UFix64, mintPositive: Bool){
@@ -405,6 +406,49 @@ pub contract ActivityContract {
 
       emit activityClosed(id:id, bonus:bonus, mintPositive:mintPositive, voteResult: voteDict)
     }
+    
+    // function for update activity consumption
+    pub fun updateConsumption(new: UFix64){
+      pre{ 
+        new > 0.0 : "new consumption should great than 0"
+      }
+      ActivityContract.createConsumption = new
+      emit consumptionUpdated(newPrice: new)
+    }
+
+    // function for update reward parameter
+    pub fun updateRewardParameter(_ new: ActivityContract.RewardParameter){
+      pre{
+        new.minRatio >= 1.0: "minRatio should gte 1.0"
+        new.maxRatio > new.minRatio: "maxRatio should greater than minRatio"
+        new.averageRatio > new.minRatio: "averageRatio should gt minRatio"
+        new.averageRatio < new.maxRatio: "averageRatio should lt maxRatio"
+        new.asymmetry > 0.0: "asymmetry should greater than 0"
+      }
+      ActivityContract.rewardParameter = new
+      emit rewardParameterUpdated(newParams: new)
+    }
+
+    // For business need, admin can create a new activity moderator resource
+    pub fun createModerator(): @Moderator {
+        return <- create Moderator()
+    }
+  }
+
+  /// moderator
+  //
+  // moderator can close activity and create airdrop activity
+  pub resource Moderator
+  {
+    // closeActivity
+    // 
+    // moderator can close negetive activity
+    pub fun closeActivity(activityId id: UInt64){
+      let admin = ActivityContract.account.borrow<&ActivityContract.Admin>(
+        from: ActivityContract.ActivityAdminStoragePath
+      ) ?? panic("Could not borrow a reference to the Admin Reference")
+      admin.closeActivity(activityId: id, bonus: 0.0, mintPositive: false)
+    }
 
     // createAirdrop
     //
@@ -442,35 +486,12 @@ pub contract ActivityContract {
       let newActivityRef = &newActivity as &ActivityContract.Activity
       adminActivityCollection.deposit(activity: <-newActivity)
 
-      // close activity
-      self.closeActivity(activityId: newActivityRef.id, bonus: bonus, mintPositive: true) 
-    }
-    
-    // function for update activity consumption
-    pub fun updateConsumption(new: UFix64){
-      pre{ 
-        new > 0.0 : "new consumption should great than 0"
-      }
-      ActivityContract.createConsumption = new
-      emit consumptionUpdated(newPrice: new)
-    }
+      // borrow admin resource and close activity
+      let admin = ActivityContract.account.borrow<&ActivityContract.Admin>(
+        from: ActivityContract.ActivityAdminStoragePath
+      ) ?? panic("Could not borrow a reference to the Admin Reference")
 
-    // function for update reward parameter
-    pub fun updateRewardParameter(_ new: ActivityContract.RewardParameter){
-      pre{
-        new.minRatio >= 1.0: "minRatio should gte 1.0"
-        new.maxRatio > new.minRatio: "maxRatio should greater than minRatio"
-        new.averageRatio > new.minRatio: "averageRatio should gt minRatio"
-        new.averageRatio < new.maxRatio: "averageRatio should lt maxRatio"
-        new.asymmetry > 0.0: "asymmetry should greater than 0"
-      }
-      ActivityContract.rewardParameter = new
-      emit rewardParameterUpdated(newParams: new)
-    }
-
-    // For business need, admin can create a new activityAdmin resource
-    pub fun createAdmin(): @Admin {
-        return <- create Admin()
+      admin.closeActivity(activityId: newActivityRef.id, bonus: bonus, mintPositive: true) 
     }
   }
 
@@ -487,6 +508,7 @@ pub contract ActivityContract {
     self.ActivityStoragePath = /storage/ActivitiesCollection_0
     self.ActivityPublicPath = /public/ActivitiesCollection_0
     self.ActivityAdminStoragePath = /storage/ActivityAdmin_0
+    self.ActivityModeratorStoragePath = /storage/ActivityModerator_0
 
     // set admin account
     let admin <- create Admin()
@@ -494,6 +516,9 @@ pub contract ActivityContract {
     self.account.save(<-ActivityContract.createEmptyCollection(), to: self.ActivityStoragePath) 
     self.account.link<&ActivityContract.Collection>(self.ActivityPublicPath, target: self.ActivityStoragePath)
     
+    let moderator <- create Moderator()
+    self.account.save(<-moderator, to: self.ActivityModeratorStoragePath)
+
     // set create consumption to 100 ccs token
     self.createConsumption = 100.0
   }

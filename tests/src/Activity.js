@@ -82,7 +82,7 @@ export const updateRewardParams = async (account, newParameter) => {
 	return sendTransaction({ name, args, signers })
 }
 
-export const createNewAdmin = async (account, admin) => {
+export const createNewModerator = async (account, admin) => {
 	const name = "Activity/create_new_admin";
 	const signers = [account, admin]
 	return sendTransaction({ name, signers })

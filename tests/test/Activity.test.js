@@ -3,7 +3,7 @@ import * as t from "@onflow/types"
 import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert } from "flow-js-testing";
 import { toUFix64, getAdminAddress, getEvent, getEvents } from "../src/common";
 import { setupCCSTokenOnAccount, mintTokenAndDistribute, getCCSTokenBalance } from "../src/CCSToken";
-import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams, createNewAdmin } from "../src/Activity";
+import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams, createNewModerator } from "../src/Activity";
 import { buyBallots, setupBallotOnAccount } from "../src/Ballot";
 import { setupMemorialsOnAccount, getCollectionIds, getCollectionLength, getMemorial, getMemorialsSupply } from "../src/Memorials";
 
@@ -204,17 +204,17 @@ describe("Activity", () => {
 
 			const mintNFTEvents = getEvents(result, 'memorialMinted')
 			expect(mintNFTEvents.length).toBe(2)
-			const [nft1, nft2] = mintNFTEvents
+			const [nft2, nft1] = mintNFTEvents
 			expect(nft1.data.reciever).toBe(Alice)
 
 			const aliceIds = await getCollectionIds(Alice)
 			expect(aliceIds.includes(nft1.data.memorialId)).toBe(true)
-			expect(nft1.data.memorialId).toBe(1)
+			expect(nft1.data.memorialId).toBe(2)
 			const depositEvents = getEvents(result, 'Deposit')
 			expect(depositEvents.length).toBe(2)
-			const [nftToAlice, nftToBob] = depositEvents
+			const [nftToBob, nftToAlice] = depositEvents
 			expect(aliceIds.includes(nftToAlice.data.id)).toBe(true)
-			expect(nft1.data.seriesNumber).toBe(1)
+			expect(nft1.data.seriesNumber).toBe(2)
 			expect(nft1.data.circulatingCount).toBe(2)
 			expect(nft1.data.activityID).toBe(0)
 			expect(nft1.data.isPositive).toBe(true)
@@ -223,9 +223,9 @@ describe("Activity", () => {
 			expect(nft2.data.reciever).toBe(Bob)
 			const bobIds = await getCollectionIds(Bob)
 			expect(bobIds.includes(nft2.data.memorialId)).toBe(true)
-			expect(nft2.data.memorialId).toBe(2)
+			expect(nft2.data.memorialId).toBe(1)
 			expect(bobIds.includes(nftToBob.data.id)).toBe(true)
-			expect(nft2.data.seriesNumber).toBe(2)
+			expect(nft2.data.seriesNumber).toBe(1)
 			expect(nft2.data.circulatingCount).toBe(2)
 			expect(nft2.data.activityID).toBe(0)
 			expect(nft2.data.isPositive).toBe(true)
@@ -261,31 +261,37 @@ describe("Activity", () => {
 	})
 
 
-	it("admin can airdrop special NFT to accounts", async () => {
+	it("Moderator can airdrop special NFT to accounts", async () => {
 		await deployActivity();
 		const Admin = await getAdminAddress();
 		const Alice = await getAccountAddress("Alice");
 		const Bob = await getAccountAddress("Bob");
+		const Chaier = await getAccountAddress("Chaier");
 		await setupMemorialsOnAccount(Alice)
 		await setupMemorialsOnAccount(Bob)
+		await setupMemorialsOnAccount(Chaier)
 
 		// user can not create airdrop
 		await shallRevert(async () => {
-			await createAirdrop(Alice, 'test airdrop 2', [Bob], toUFix64(5))
+			await createAirdrop(Alice, 'test airdrop 2', [Alice, Bob, Chaier], toUFix64(5))
 		})
 
-		// admin can create airdrop
+		await createNewModerator(Alice, Admin)
+
+		// moderator can create airdrop
 		await shallResolve(async () => {
-			await createAirdrop(Admin, 'test airdrop', [Alice, Bob], toUFix64(5))
+			await createAirdrop(Alice, 'test airdrop', [Alice, Bob, Chaier], toUFix64(5))
 			const result = await getActivity(0)
 			expect(result.closed).toBe(true)
 		})
 
-		// Alice and Bob should have airdrop NFT
+		// Peoples should have airdrop NFT
 		const AliceCollectionLength = await getCollectionLength(Alice)
 		expect(AliceCollectionLength).not.toBe(0)
 		const bobCollectionLength = await getCollectionLength(Bob)
 		expect(bobCollectionLength).not.toBe(0)
+		const chaierCollectionLength = await getCollectionLength(Chaier)
+		expect(chaierCollectionLength).not.toBe(0)
 
 		const AliceCollectionIDs = await getCollectionIds(Alice)
 		const AlicememorialID = AliceCollectionIDs.pop()
@@ -293,8 +299,6 @@ describe("Activity", () => {
 		expect(Alicememorial.activityID).toBe(0)
 		expect(Alicememorial.owner).toBe(Alice)
 		expect(Alicememorial.bonus).toBe(toUFix64(5))
-		expect(Alicememorial.seriesNumber).toBe(1)
-		expect(Alicememorial.circulatingCount).toBe(2)
 
 		const BobCollectionIDs = await getCollectionIds(Bob)
 		const BobmemorialID = BobCollectionIDs.pop()
@@ -302,7 +306,13 @@ describe("Activity", () => {
 		expect(Bobmemorial.activityID).toBe(0)
 		expect(Bobmemorial.owner).toBe(Bob)
 		expect(Bobmemorial.bonus).toBe(toUFix64(5))
-		expect(Bobmemorial.seriesNumber).toBe(2)
+
+		const ChaierCollectionIDs = await getCollectionIds(Chaier)
+		const ChaiermemorialID = ChaierCollectionIDs.pop()
+		const Chaiermemorial = await getMemorial(Chaier, ChaiermemorialID)
+		expect(Chaiermemorial.activityID).toBe(0)
+		expect(Chaiermemorial.owner).toBe(Chaier)
+		expect(Chaiermemorial.bonus).toBe(toUFix64(5))
 	})
 
 
@@ -416,14 +426,14 @@ describe("Activity", () => {
 		})
 	})
 
-	it("admin can create new activity admin", async () => {
+	it("admin can create new activity moderator", async () => {
 		await deployActivity();
 		const Admin = await getAdminAddress();
 		const Alice = await getAccountAddress("Alice");
 		await setupMemorialsOnAccount(Alice)
 
 		await shallResolve(async () => {
-			await createNewAdmin(Alice, Admin)
+			await createNewModerator(Alice, Admin)
 		})
 
 		// Alice can create airdrop now
