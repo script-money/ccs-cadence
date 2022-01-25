@@ -28,3 +28,8 @@ The main logic is
 3. (redeploy) run `sh remove.sh`, then rewrite all path in contract's init(), for example, replace `self.ActivityStoragePath = /storage/ActivitiesCollection_0` to `self.ActivityStoragePath = /storage/ActivitiesCollection_1`, than run 2.
 4. check deploy result at *https://flow-view-source.com/testnet/account/[contract_address]*
 5. use `flow keys generate` and `flow transactions send ./transactions/account/add_keys.cdc [PK] -n testnet --signer testnet-account` for server key rotation sign.
+
+## how to close spam activity
+
+1. fill moderator account and private in .env
+2. `flow transactions send transactions/Activity/close_spam_activity.cdc ACTIVITYID --network testnet --signer testnet-account`

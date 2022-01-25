@@ -87,3 +87,10 @@ export const createNewModerator = async (account, admin) => {
 	const signers = [account, admin]
 	return sendTransaction({ name, signers })
 }
+
+export const closeSpamActivity = async (account, id) => {
+	const name = "Activity/close_spam_activity";
+	const args = [id]
+	const signers = [account]
+	return sendTransaction({ name, args, signers })
+}

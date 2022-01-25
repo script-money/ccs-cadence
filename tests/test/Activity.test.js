@@ -3,7 +3,7 @@ import * as t from "@onflow/types"
 import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert } from "flow-js-testing";
 import { toUFix64, getAdminAddress, getEvent, getEvents } from "../src/common";
 import { setupCCSTokenOnAccount, mintTokenAndDistribute, getCCSTokenBalance } from "../src/CCSToken";
-import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams, createNewModerator } from "../src/Activity";
+import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams, createNewModerator, closeSpamActivity } from "../src/Activity";
 import { buyBallots, setupBallotOnAccount } from "../src/Ballot";
 import { setupMemorialsOnAccount, getCollectionIds, getCollectionLength, getMemorial, getMemorialsSupply } from "../src/Memorials";
 
@@ -439,6 +439,38 @@ describe("Activity", () => {
 		// Alice can create airdrop now
 		await shallResolve(async () => {
 			await createAirdrop(Alice, 'test airdrop', [Alice], toUFix64(5))
+			const result = await getActivity(0)
+			expect(result.closed).toBe(true)
+		})
+	})
+
+	it("moderator can close spam activity", async () => {
+		await deployActivity();
+		const Admin = await getAdminAddress();
+		const Alice = await getAccountAddress("Alice");
+		const Bob = await getAccountAddress("Bob");
+		await setupCCSTokenOnAccount(Bob)
+
+		await shallResolve(async () => {
+			await createNewModerator(Alice, Admin)
+		})
+
+		// Bob create activity
+		const sendToBobAmount = 100
+		const args =
+			[
+				[
+					{ key: Bob, value: toUFix64(sendToBobAmount) }
+				],
+				t.Dictionary({ key: t.Address, value: t.UFix64 }),
+			]
+
+		await mintTokenAndDistribute(args)
+		await createActivity(Bob, 'spam activity')
+
+		// Alice can close spam activity
+		await shallResolve(async () => {
+			await closeSpamActivity(Alice, 0)
 			const result = await getActivity(0)
 			expect(result.closed).toBe(true)
 		})
