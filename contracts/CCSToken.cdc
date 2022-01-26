@@ -13,9 +13,6 @@ pub contract CCSToken: FungibleToken {
     // The event that is emitted when tokens are deposited to a Vault
     pub event TokensDeposited(amount: UFix64, to: Address?)
 
-    // The event that is emitted when new tokens are minted
-    pub event TokensMinted(amount: UFix64)
-
     // The event that is emitted when tokens are destroyed
     pub event TokensBurned(amount: UFix64)
 
@@ -84,15 +81,6 @@ pub contract CCSToken: FungibleToken {
     }
 
     pub resource Administrator {
-      // createNewMinter
-      //
-      // Function that creates and returns a new minter resource
-      //
-      pub fun createNewMinter(allowedAmount: UFix64): @Minter {
-          emit MinterCreated(allowedAmount: allowedAmount)
-          return <-create Minter(allowedAmount: allowedAmount)
-      }
-
       // createAirdrop
       //
       // Function that directly create vault and mint tokens to a receiver
@@ -103,42 +91,12 @@ pub contract CCSToken: FungibleToken {
           .borrow<&{FungibleToken.Receiver}>()?? panic("Unable to borrow receiver reference")
 
           let amount = addressAmountMap[address]!
-          let minter <- self.createNewMinter(allowedAmount: amount)
-          let mintedVault <- minter.mintTokens(amount: amount)
-          receiverRef.deposit(from: <-mintedVault)
+          CCSToken.totalSupply = CCSToken.totalSupply + amount
+          receiverRef.deposit(from: <-create Vault(balance: amount))
           emit TokenAirdrop(receiver: address, amount: amount)
-          destroy minter
         }
       }
     }
-
-    // Minter
-    //
-    // Resource object that token admin accounts can hold to mint new tokens.
-    pub resource Minter {
-      // The amount of tokens that the minter is allowed to mint
-      pub var allowedAmount: UFix64
-
-      // mintTokens
-      //
-      // Function that mints new tokens, adds them to the total supply,
-      // and returns them to the calling context.
-      pub fun mintTokens(amount: UFix64): @CCSToken.Vault {
-        pre {
-          amount > 0.0: "Amount minted must be greater than zero"
-          amount <= self.allowedAmount: "Amount minted must be less than the allowed amount"
-        }
-        CCSToken.totalSupply = CCSToken.totalSupply + amount
-        self.allowedAmount = self.allowedAmount - amount
-        emit TokensMinted(amount: amount)
-        return <-create Vault(balance: amount)
-      }
-
-      init(allowedAmount: UFix64) {
-        self.allowedAmount = allowedAmount
-      }
-    }
-  
 
     init() {
       // Set our named paths.

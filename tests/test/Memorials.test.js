@@ -32,7 +32,7 @@ describe("Memorials", () => {
 		await shallPass(setupMemorialsOnAccount(Admin));
 
 		await shallResolve(async () => {
-			const supply = await getMemorialsSupply();
+			const supply = (await getMemorialsSupply())[0]
 			expect(supply).toBe(0);
 		});
 	});

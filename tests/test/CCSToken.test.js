@@ -33,7 +33,7 @@ describe("CCSToken", () => {
 		await shallPass(deployCCSToken());
 
 		await shallResolve(async () => {
-			const supply = await getCCSTokenSupply();
+			const supply = (await getCCSTokenSupply())[0]
 			expect(supply).toBe(toUFix64(0));
 		});
 	});
@@ -72,9 +72,9 @@ describe("CCSToken", () => {
 		});
 
 		await shallResolve(async () => {
-			const supply = await getCCSTokenSupply();
-			const aliceBalance = await getCCSTokenBalance(Alice);
-			const boBBalance = await getCCSTokenBalance(Bob);
+			const supply = (await getCCSTokenSupply())[0]
+			const aliceBalance = (await getCCSTokenBalance(Alice))[0]
+			const boBBalance = (await getCCSTokenBalance(Bob))[0]
 			expect(supply).toBe(toUFix64(sendToAliceAmount + sendToBobAmount));
 			expect(aliceBalance).toBe(toUFix64(sendToAliceAmount));
 			expect(boBBalance).toBe(toUFix64(sendToBobAmount));

@@ -3,7 +3,11 @@ import * as t from "@onflow/types"
 import { emulator, init, getAccountAddress, shallPass, shallResolve, shallRevert } from "flow-js-testing";
 import { toUFix64, getAdminAddress, getEvent, getEvents } from "../src/common";
 import { setupCCSTokenOnAccount, mintTokenAndDistribute, getCCSTokenBalance } from "../src/CCSToken";
-import { deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds, getActivity, vote, closeActivity, createAirdrop, getRewardParams, updateRewardParams, createNewModerator, closeSpamActivity } from "../src/Activity";
+import {
+	deployActivity, createActivity, getCreateConsumption, updateCreateConsumption, getActivityIds,
+	getActivity, vote, closeActivity, getRewardParams, updateRewardParams,
+	createNewModerator, batchMintMemorials
+} from "../src/Activity";
 import { buyBallots, setupBallotOnAccount } from "../src/Ballot";
 import { setupMemorialsOnAccount, getCollectionIds, getCollectionLength, getMemorial, getMemorialsSupply } from "../src/Memorials";
 
@@ -48,26 +52,26 @@ describe("Activity", () => {
 		await shallResolve(async () => {
 			await mintTokenAndDistribute(args)
 			// get create comsuption
-			const consumption = await getCreateConsumption()
+			const consumption = (await getCreateConsumption())[0]
 			expect(consumption).toBe(toUFix64(100));
 			// Alice spent token to create activity
 			const result = await createActivity(Alice, 'test activity 01')
 			const activityCreateEvent = getEvent(result, 'activityCreated')
 			expect(activityCreateEvent).not.toBe(null)
-			const aliceBalance = await getCCSTokenBalance(Alice);
+			const aliceBalance = (await getCCSTokenBalance(Alice))[0]
 			expect(aliceBalance).toBe(toUFix64(sendToAliceAmount - consumption));
 		});
 
 		// can find activity id is [0]
 		await shallResolve(async () => {
-			const ids = await getActivityIds()
+			const ids = (await getActivityIds())[0]
 			expect(ids).toContain(0);
 			expect(ids.length).toBe(1);
 		})
 
 		// new activity should have title 'test activity 01'
 		await shallResolve(async () => {
-			const activity = await getActivity(0)
+			const activity = (await getActivity(0))[0]
 			expect(activity.title).toBe('test activity 01');
 		})
 
@@ -136,7 +140,7 @@ describe("Activity", () => {
 		})
 
 		// get vote result
-		const result = await getActivity(0)
+		const result = (await getActivity(0))[0]
 		expect(Object.keys(result.voteResult).length).toBe(3)
 		expect(result.upVoteCount).toBe(2)
 		expect(result.downVoteCount).toBe(1)
@@ -154,15 +158,18 @@ describe("Activity", () => {
 		const Alice = await getAccountAddress("Alice");
 		const Bob = await getAccountAddress("Bob");
 		const Chaier = await getAccountAddress("Chaier");
+		const David = await getAccountAddress("David");
 		await setupCCSTokenOnAccount(Alice)
 		await setupCCSTokenOnAccount(Bob)
 		await setupCCSTokenOnAccount(Chaier)
+		await setupCCSTokenOnAccount(David)
 		const args =
 			[
 				[
 					{ key: Alice, value: toUFix64(100) },
 					{ key: Bob, value: toUFix64(100) },
-					{ key: Chaier, value: toUFix64(100) }
+					{ key: Chaier, value: toUFix64(100) },
+					{ key: David, value: toUFix64(100) }
 				],
 				t.Dictionary({ key: t.Address, value: t.UFix64 }),
 			]
@@ -172,15 +179,19 @@ describe("Activity", () => {
 		await createActivity(Alice, 'test activity 02')
 		await setupBallotOnAccount(Bob);
 		await setupBallotOnAccount(Chaier);
+		await setupBallotOnAccount(David);
 		await buyBallots(Bob, 1);
 		await buyBallots(Chaier, 1);
+		await buyBallots(David, 1);
 		await vote(Bob, 0, true)
 		await vote(Chaier, 0, false)
+		await vote(David, 0, true)
 
 		// set memorials storage
 		await setupMemorialsOnAccount(Alice)
 		await setupMemorialsOnAccount(Bob)
 		await setupMemorialsOnAccount(Chaier)
+		await setupMemorialsOnAccount(David)
 
 		// user cannot close activity
 		await shallRevert(async () => {
@@ -194,133 +205,100 @@ describe("Activity", () => {
 			expect(activityClosedEvent).not.toBe(null)
 			const eventData = activityClosedEvent.data
 			expect(eventData.id).toBe(0)
-			expect(eventData.bonus).toBe(toUFix64(1))
-			expect(eventData.mintPositive).toBe(true)
-			expect(eventData.voteResult).toMatchObject({
-				[Alice]: true,
-				[Bob]: true,
-				[Chaier]: false
-			})
-
-			const mintNFTEvents = getEvents(result, 'memorialMinted')
+			const voteDict1 = { [Alice]: true, [Bob]: true }
+			const result1 = await batchMintMemorials(Admin, 0, true, voteDict1)
+			const mintNFTEvents = getEvents(result1, 'memorialMinted')
 			expect(mintNFTEvents.length).toBe(2)
-			const [nft2, nft1] = mintNFTEvents
+			const [nft1, nft2] = mintNFTEvents
 			expect(nft1.data.reciever).toBe(Alice)
 
-			const aliceIds = await getCollectionIds(Alice)
+			const voteDict2 = { [Chaier]: false, [David]: true }
+			const result2 = await batchMintMemorials(Admin, 0, true, voteDict2, 3)
+			const mintNFTEvents2 = getEvents(result2, 'memorialMinted')
+			expect(mintNFTEvents2.length).toBe(1)
+			const [nft3] = mintNFTEvents2
+			expect(nft3.data.reciever).toBe(David)
+
+			const aliceIds = (await getCollectionIds(Alice))[0]
 			expect(aliceIds.includes(nft1.data.memorialId)).toBe(true)
-			expect(nft1.data.memorialId).toBe(2)
-			const depositEvents = getEvents(result, 'Deposit')
+			expect(nft1.data.memorialId).toBe(1)
+			const depositEvents = getEvents(result1, 'Deposit')
 			expect(depositEvents.length).toBe(2)
-			const [nftToBob, nftToAlice] = depositEvents
+			const [nftToAlice, nftToBob] = depositEvents
+			const depositEvents2 = getEvents(result2, 'Deposit')
+			expect(depositEvents2.length).toBe(1)
+			const [nftToDavid] = depositEvents2
 			expect(aliceIds.includes(nftToAlice.data.id)).toBe(true)
-			expect(nft1.data.seriesNumber).toBe(2)
-			expect(nft1.data.circulatingCount).toBe(2)
+			expect(nft1.data.seriesNumber).toBe(1)
+			expect(nft1.data.circulatingCount).toBe(3)
 			expect(nft1.data.activityID).toBe(0)
 			expect(nft1.data.isPositive).toBe(true)
 			expect(nft1.data.bonus).toBe(toUFix64(1))
 
 			expect(nft2.data.reciever).toBe(Bob)
-			const bobIds = await getCollectionIds(Bob)
+			const bobIds = (await getCollectionIds(Bob))[0]
 			expect(bobIds.includes(nft2.data.memorialId)).toBe(true)
-			expect(nft2.data.memorialId).toBe(1)
+			expect(nft2.data.memorialId).toBe(2)
 			expect(bobIds.includes(nftToBob.data.id)).toBe(true)
-			expect(nft2.data.seriesNumber).toBe(1)
-			expect(nft2.data.circulatingCount).toBe(2)
+			expect(nft2.data.seriesNumber).toBe(2)
+			expect(nft2.data.circulatingCount).toBe(3)
 			expect(nft2.data.activityID).toBe(0)
 			expect(nft2.data.isPositive).toBe(true)
 			expect(nft2.data.bonus).toBe(toUFix64(1))
 
-			const result2 = await getActivity(0)
-			expect(result2.closed).toBe(true)
+			expect(nft3.data.reciever).toBe(David)
+			const DavidIds = (await getCollectionIds(David))[0]
+			expect(DavidIds.includes(nft3.data.memorialId)).toBe(true)
+			expect(nft3.data.memorialId).toBe(3)
+			expect(DavidIds.includes(nftToDavid.data.id)).toBe(true)
+			expect(nft3.data.seriesNumber).toBe(3)
+			expect(nft3.data.circulatingCount).toBe(3)
+			expect(nft3.data.activityID).toBe(0)
+			expect(nft3.data.isPositive).toBe(true)
+			expect(nft3.data.bonus).toBe(toUFix64(1))
+
+			const result3 = (await getActivity(0))[0]
+			expect(result3.closed).toBe(true)
 		})
 
 		// user vote positive should has memorials
-		const AliceCollectionLength = await getCollectionLength(Alice)
+		const AliceCollectionLength = (await getCollectionLength(Alice))[0]
 		expect(AliceCollectionLength).not.toBe(0)
-		const bobCollectionLength = await getCollectionLength(Bob)
+		const bobCollectionLength = (await getCollectionLength(Bob))[0]
 		expect(bobCollectionLength).not.toBe(0)
-		const chaierCollectionLength = await getCollectionLength(Chaier)
+		const chaierCollectionLength = (await getCollectionLength(Chaier))[0]
 		expect(chaierCollectionLength).toBe(0)
-		const memorialsSupply = await getMemorialsSupply()
-		expect(memorialsSupply).toBe(2)
+		const davidCollectionLength = (await getCollectionLength(David))[0]
+		expect(davidCollectionLength).not.toBe(0)
+		const memorialsSupply = (await getMemorialsSupply())[0]
+		expect(memorialsSupply).toBe(3)
 
 		// can get memorials information
-		const AliceCollectionIDs = await getCollectionIds(Alice)
+		const AliceCollectionIDs = (await getCollectionIds(Alice))[0]
 		const AlicememorialID = AliceCollectionIDs.pop()
-		const Alicememorial = await getMemorial(Alice, AlicememorialID)
+		const Alicememorial = (await getMemorial(Alice, AlicememorialID))[0]
 		expect(Alicememorial.activityID).toBe(0)
 		expect(Alicememorial.isPositive).toBe(true)
 		expect(Alicememorial.owner).toBe(Alice)
-		const BobCollectionIDs = await getCollectionIds(Bob)
+		const BobCollectionIDs = (await getCollectionIds(Bob))[0]
 		const BobmemorialID = BobCollectionIDs.pop()
-		const Bobmemorial = await getMemorial(Bob, BobmemorialID)
+		const Bobmemorial = (await getMemorial(Bob, BobmemorialID))[0]
 		expect(Bobmemorial.activityID).toBe(0)
 		expect(Bobmemorial.isPositive).toBe(true)
 		expect(Bobmemorial.owner).toBe(Bob)
+		const DavidCollectionIDs = (await getCollectionIds(David))[0]
+		const DavidmemorialID = DavidCollectionIDs.pop()
+		const Davidmemorial = (await getMemorial(David, DavidmemorialID))[0]
+		expect(Davidmemorial.activityID).toBe(0)
+		expect(Davidmemorial.isPositive).toBe(true)
+		expect(Davidmemorial.owner).toBe(David)
 	})
-
-
-	it("Moderator can airdrop special NFT to accounts", async () => {
-		await deployActivity();
-		const Admin = await getAdminAddress();
-		const Alice = await getAccountAddress("Alice");
-		const Bob = await getAccountAddress("Bob");
-		const Chaier = await getAccountAddress("Chaier");
-		await setupMemorialsOnAccount(Alice)
-		await setupMemorialsOnAccount(Bob)
-		await setupMemorialsOnAccount(Chaier)
-
-		// user can not create airdrop
-		await shallRevert(async () => {
-			await createAirdrop(Alice, 'test airdrop 2', [Alice, Bob, Chaier], toUFix64(5))
-		})
-
-		await createNewModerator(Alice, Admin)
-
-		// moderator can create airdrop
-		await shallResolve(async () => {
-			await createAirdrop(Alice, 'test airdrop', [Alice, Bob, Chaier], toUFix64(5))
-			const result = await getActivity(0)
-			expect(result.closed).toBe(true)
-		})
-
-		// Peoples should have airdrop NFT
-		const AliceCollectionLength = await getCollectionLength(Alice)
-		expect(AliceCollectionLength).not.toBe(0)
-		const bobCollectionLength = await getCollectionLength(Bob)
-		expect(bobCollectionLength).not.toBe(0)
-		const chaierCollectionLength = await getCollectionLength(Chaier)
-		expect(chaierCollectionLength).not.toBe(0)
-
-		const AliceCollectionIDs = await getCollectionIds(Alice)
-		const AlicememorialID = AliceCollectionIDs.pop()
-		const Alicememorial = await getMemorial(Alice, AlicememorialID)
-		expect(Alicememorial.activityID).toBe(0)
-		expect(Alicememorial.owner).toBe(Alice)
-		expect(Alicememorial.bonus).toBe(toUFix64(5))
-
-		const BobCollectionIDs = await getCollectionIds(Bob)
-		const BobmemorialID = BobCollectionIDs.pop()
-		const Bobmemorial = await getMemorial(Bob, BobmemorialID)
-		expect(Bobmemorial.activityID).toBe(0)
-		expect(Bobmemorial.owner).toBe(Bob)
-		expect(Bobmemorial.bonus).toBe(toUFix64(5))
-
-		const ChaierCollectionIDs = await getCollectionIds(Chaier)
-		const ChaiermemorialID = ChaierCollectionIDs.pop()
-		const Chaiermemorial = await getMemorial(Chaier, ChaiermemorialID)
-		expect(Chaiermemorial.activityID).toBe(0)
-		expect(Chaiermemorial.owner).toBe(Chaier)
-		expect(Chaiermemorial.bonus).toBe(toUFix64(5))
-	})
-
 
 	it("admin can set reward params, user can't", async () => {
 		await deployActivity();
 		const Admin = await getAdminAddress();
 		const Alice = await getAccountAddress("Alice");
-		const rewardParams = await getRewardParams()
+		const rewardParams = (await getRewardParams())[0]
 		expect(rewardParams.maxRatio).toBe(toUFix64(5))
 		expect(rewardParams.minRatio).toBe(toUFix64(1))
 		expect(rewardParams.averageRatio).toBe(toUFix64(1.5))
@@ -341,7 +319,7 @@ describe("Activity", () => {
 			expect(newParams.asymmetry).toBe(toUFix64(2.0))
 		})
 
-		const rewardParams2 = await getRewardParams()
+		const rewardParams2 = (await getRewardParams())[0]
 		expect(rewardParams2.maxRatio).toBe(toUFix64(6))
 		expect(rewardParams2.minRatio).toBe(toUFix64(1.1))
 		expect(rewardParams2.averageRatio).toBe(toUFix64(1.3))
@@ -426,24 +404,6 @@ describe("Activity", () => {
 		})
 	})
 
-	it("admin can create new activity moderator", async () => {
-		await deployActivity();
-		const Admin = await getAdminAddress();
-		const Alice = await getAccountAddress("Alice");
-		await setupMemorialsOnAccount(Alice)
-
-		await shallResolve(async () => {
-			await createNewModerator(Alice, Admin)
-		})
-
-		// Alice can create airdrop now
-		await shallResolve(async () => {
-			await createAirdrop(Alice, 'test airdrop', [Alice], toUFix64(5))
-			const result = await getActivity(0)
-			expect(result.closed).toBe(true)
-		})
-	})
-
 	it("moderator can close spam activity", async () => {
 		await deployActivity();
 		const Admin = await getAdminAddress();
@@ -470,9 +430,44 @@ describe("Activity", () => {
 
 		// Alice can close spam activity
 		await shallResolve(async () => {
-			await closeSpamActivity(Alice, 0)
-			const result = await getActivity(0)
+			await closeActivity(Alice, 0)
+			const result = (await getActivity(0))[0]
 			expect(result.closed).toBe(true)
 		})
 	})
+
+	it("can't batch mint nft if no activity or activity not close when airdrop", async () => {
+		await deployActivity();
+		const Admin = await getAdminAddress();
+		await setupCCSTokenOnAccount(Admin)
+		const args =
+			[
+				[
+					{ key: Admin, value: toUFix64(100) }
+				],
+				t.Dictionary({ key: t.Address, value: t.UFix64 }),
+			]
+		await mintTokenAndDistribute(args)
+
+		const Alice = await getAccountAddress("Alice");
+		await setupMemorialsOnAccount(Alice)
+
+
+		// no activity
+		await shallRevert(async () => {
+			const [result, error] = await batchMintMemorials(Admin, 0, true, { Alice: true }, true, 1)
+		})
+
+		// activity not close
+		await createActivity(Admin, 'test activity 0')
+		await shallRevert(async () => {
+			await batchMintMemorials(Admin, 0, true, { Alice: true }, true, 1)
+		})
+
+		await closeActivity(Admin, 0)
+		await shallResolve(async () => {
+			await batchMintMemorials(Admin, 0, true, { Alice: true }, true, 1)
+		})
+	})
+
 })

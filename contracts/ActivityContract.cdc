@@ -34,7 +34,7 @@ pub contract ActivityContract {
   // activityClosed
   //
   // Event emitted when an activity is closed, use for data sync to database
-  pub event activityClosed(id:UInt64, bonus: UFix64, mintPositive: Bool, voteResult:{Address: Bool})
+  pub event activityClosed(id:UInt64)
 
   // consumptionUpdated
   //
@@ -323,8 +323,8 @@ pub contract ActivityContract {
   //
   // Admin can update consumption, update reward parameter and create new moderator
   pub resource Admin {
-    // close activity by id, bonus and mintPositive are computed off blockchain
-    pub fun closeActivity(activityId id: UInt64, bonus: UFix64, mintPositive: Bool){
+    // close activity by id
+    pub fun closeActivity(activityId id: UInt64){
       pre{
         // can operate activity id in collection ids
         ActivityContract.getIDs().contains(id): "activityId is not in collection"
@@ -335,6 +335,19 @@ pub contract ActivityContract {
       // make activity closed
       if !activityRef.closed {
         activityRef.close()  
+        emit activityClosed(id:id)
+      }
+    }
+
+    // batch mint memrials then send to users, suggest mint 5 once
+    pub fun batchMintMemorials(activityId id: UInt64, bonus: UFix64, mintPositive: Bool, voteDict: {Address:Bool}, startFrom: UInt64, isAirdrop: Bool?, TotalCount: UInt64?){      
+      // get activity reference
+      let activityRef = ActivityContract.getActivity(id: id)!
+
+      assert(activityRef.closed, message: "activity must be closed")
+
+      if(isAirdrop == true){
+        assert(TotalCount != nil, message: "TotalCount must not be nil")
       }
 
       // get Memorials Miner
@@ -343,18 +356,17 @@ pub contract ActivityContract {
       ) ?? panic("Could not borrow a reference to the NFTMinter")
       
       // get vote result dictionary
-      let voteDict = activityRef.voteResult
+      let allVoteDict = activityRef.voteResult
 
       // use for set memorial NFT's series number
-      var i: UInt64 = 1
+      var i: UInt64 = startFrom
 
       // two type of memorials can be minted, positive and negative
       if mintPositive {
         // loop for each voter who vote for
         for address in voteDict.keys {
-          assert(address != nil, message: "Can not get reciever address")
-          let isUpVote = activityRef.voteResult[address]!
-
+          let isUpVote = isAirdrop == true ? true : voteDict[address]!
+          assert(voteDict[address] == allVoteDict[address], message: "import vote result not same result in contract")
           if isUpVote {
             // get voter's public Memorials collection 
             let receiver = getAccount(address)
@@ -365,7 +377,7 @@ pub contract ActivityContract {
             minter.mintNFT(
               recipient: receiver, 
               seriesNumber: i,
-              circulatingCount: UInt64(activityRef.upVoteCount),
+              circulatingCount: isAirdrop == true ? TotalCount! : UInt64(activityRef.upVoteCount),
               activityID: activityRef.id, 
               title: activityRef.title, 
               isPositive: true,
@@ -379,8 +391,8 @@ pub contract ActivityContract {
       } else {
         // loop for each voter who vote against
         for address in voteDict.keys {
-          assert(address != nil, message: "Can not get reciever address")
-          let isUpVote = activityRef.voteResult[address]!
+          let isUpVote = voteDict[address]!
+          assert(voteDict[address] == allVoteDict[address], message: "import vote result not same result in contract")
           if !isUpVote {
             // get voter's public Memorials collection 
             let receiver = getAccount(address)
@@ -403,8 +415,6 @@ pub contract ActivityContract {
           }
         }
       }
-
-      emit activityClosed(id:id, bonus:bonus, mintPositive:mintPositive, voteResult: voteDict)
     }
     
     // function for update activity consumption
@@ -447,51 +457,7 @@ pub contract ActivityContract {
       let admin = ActivityContract.account.borrow<&ActivityContract.Admin>(
         from: ActivityContract.ActivityAdminStoragePath
       ) ?? panic("Could not borrow a reference to the Admin Reference")
-      admin.closeActivity(activityId: id, bonus: 0.0, mintPositive: false)
-    }
-
-    // createAirdrop
-    //
-    // airdrop is a special activity has preset addresses and memorial bonus property
-    pub fun createAirdrop(title:String, recievers:[Address], bonus:UFix64, metadata: String){
-      pre { 
-        title.length != 0: "Title should not be empty"
-        recievers.length != 0: "recievers should at least 1 address"
-      }
-
-      // create empty vote result dictionary
-      let recieverVotes:{Address:Bool} = {}
-
-      // insert vote up to dictionary
-      for reciever in recievers{
-        recieverVotes.insert(key: reciever, true)
-      }
-
-      // create new activity resource
-      let newActivity <- create Activity(
-        _creator: ActivityContract.account.address, 
-        _title: title, 
-        metadata: metadata, 
-        preVote: recieverVotes
-      )
-
-      // activity supply increment 1
-      ActivityContract.totalSupply = ActivityContract.totalSupply + (1 as UInt64)
-      
-      // borrow admin activity collection references
-      let adminActivityCollection = ActivityContract.account
-        .borrow<&ActivityContract.Collection>(from: ActivityContract.ActivityStoragePath)!
-
-      // insert new activity to admin activity collection
-      let newActivityRef = &newActivity as &ActivityContract.Activity
-      adminActivityCollection.deposit(activity: <-newActivity)
-
-      // borrow admin resource and close activity
-      let admin = ActivityContract.account.borrow<&ActivityContract.Admin>(
-        from: ActivityContract.ActivityAdminStoragePath
-      ) ?? panic("Could not borrow a reference to the Admin Reference")
-
-      admin.closeActivity(activityId: newActivityRef.id, bonus: bonus, mintPositive: true) 
+      admin.closeActivity(activityId: id)
     }
   }
 

@@ -1,19 +1,19 @@
 import ActivityContract from "../../contracts/ActivityContract.cdc"
 
-transaction(_activityID: UInt64, bonus: UFix64, mintPositive:Bool) {
+transaction(_activityID: UInt64) {
     
     // local variable for storing the minter reference
-    let admin: &ActivityContract.Admin
+    let moderator: &ActivityContract.Moderator
 
     prepare(signer: AuthAccount) {
 
       // borrow a reference to the activityAdmin resource in storage
-      self.admin = signer.borrow<&ActivityContract.Admin>(
-        from: ActivityContract.ActivityAdminStoragePath
-      ) ?? panic("Could not borrow a reference to the activity admin")
+      self.moderator = signer.borrow<&ActivityContract.Moderator>(
+        from: ActivityContract.ActivityModeratorStoragePath
+      ) ?? panic("Could not borrow a reference to the activity moderator resource")
     }
 
     execute {
-      self.admin.closeActivity(activityId: _activityID, bonus: bonus, mintPositive:mintPositive)
+      self.moderator.closeActivity(activityId: _activityID)
     }
 }

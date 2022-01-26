@@ -56,16 +56,9 @@ export const vote = async (account, id, isUpVote) => {
 	return sendTransaction({ name, args, signers })
 }
 
-export const closeActivity = async (account, id, bonus = toUFix64(1.0), mintPositive = true) => {
+export const closeActivity = async (account, id) => {
 	const name = "Activity/close_activity"
-	const args = [id, bonus, mintPositive]
-	const signers = [account]
-	return sendTransaction({ name, args, signers })
-}
-
-export const createAirdrop = async (account, title, recievers, bonus = toUFix64(1.0), metadata = "") => {
-	const name = "Activity/create_airdrop"
-	const args = [title, recievers, bonus, metadata]
+	const args = [id]
 	const signers = [account]
 	return sendTransaction({ name, args, signers })
 }
@@ -88,9 +81,10 @@ export const createNewModerator = async (account, admin) => {
 	return sendTransaction({ name, signers })
 }
 
-export const closeSpamActivity = async (account, id) => {
-	const name = "Activity/close_spam_activity";
-	const args = [id]
+export const batchMintMemorials = async (account, activityId, mintPositive, voteDict,
+	startFrom = 1, isAirdrop = false, TotalCount = 0, bonus = toUFix64(1.0)) => {
+	const name = "Activity/batch_mint_memorials";
+	const args = [activityId, bonus, mintPositive, voteDict, startFrom, isAirdrop, TotalCount]
 	const signers = [account]
 	return sendTransaction({ name, args, signers })
-}
+};

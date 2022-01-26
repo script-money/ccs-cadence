@@ -34,14 +34,14 @@ describe("Activity", () => {
 
 		// can read ballot price
 		await shallResolve(async () => {
-			const price = await getPrice()
+			const price = (await getPrice())[0]
 			expect(price).toEqual(toUFix64(1))
 		})
 
 		// admin can set new price and emit event
 		await shallResolve(async () => {
 			await setPrice(toUFix64(2), Admin)
-			const price = await getPrice()
+			const price = (await getPrice())[0]
 			expect(price).toEqual(toUFix64(2))
 		})
 
@@ -111,13 +111,13 @@ describe("Activity", () => {
 
 		// Anyone can check Alice's ballots number
 		await shallResolve(async () => {
-			const ballotHolding = await getHoldings(Alice)
+			const ballotHolding = (await getHoldings(Alice))[0]
 			expect(ballotHolding).toBe(15)
 		})
 
 		// anyone can read how many ballots sold
 		await shallResolve(async () => {
-			const soldAmount = await getSoldAmount()
+			const soldAmount = (await getSoldAmount())[0]
 			expect(soldAmount).toBe(15)
 		})
 	})
