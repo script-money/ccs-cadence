@@ -29,7 +29,7 @@ The main logic is
 4. check deploy result at *https://flow-view-source.com/testnet/account/[contract_address]*
 5. use `flow keys generate` and `flow transactions send ./transactions/account/add_keys.cdc [PK] -n testnet --signer testnet-account` for server key rotation sign.
 
-## how to close spam activity
+## how to close activity manualy
 
 1. fill moderator account and private in .env
-2. `flow transactions send transactions/Activity/close_spam_activity.cdc ACTIVITYID --network testnet --signer testnet-account`
+2. `flow transactions send transactions/Activity/close_activity.cdc ACTIVITYID --network testnet --signer testnet-account`
