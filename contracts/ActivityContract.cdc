@@ -471,10 +471,10 @@ pub contract ActivityContract {
     
     // Set our named paths
     // remove _0x when mainnet deploy
-    self.ActivityStoragePath = /storage/ActivitiesCollection_0
-    self.ActivityPublicPath = /public/ActivitiesCollection_0
-    self.ActivityAdminStoragePath = /storage/ActivityAdmin_0
-    self.ActivityModeratorStoragePath = /storage/ActivityModerator_0
+    self.ActivityStoragePath = /storage/ActivitiesCollection_testnet2
+    self.ActivityPublicPath = /public/ActivitiesCollection_testnet2
+    self.ActivityAdminStoragePath = /storage/ActivityAdmin_testnet2
+    self.ActivityModeratorStoragePath = /storage/ActivityModerator_testnet2
 
     // set admin account
     let admin <- create Admin()

@@ -129,9 +129,9 @@ pub contract BallotContract {
 
     // Set our named paths
     // remove _0x when mainnet deploy
-    self.CollectionStoragePath = /storage/BallotCollectionStoragePath_0
-    self.CollectionPublicPath = /public/BallotCollectionPublicPath_0
-    self.AdminStoragePath = /storage/BallotCollectionAdminStoragePath_0
+    self.CollectionStoragePath = /storage/BallotCollectionStoragePath_testnet2
+    self.CollectionPublicPath = /public/BallotCollectionPublicPath_testnet2
+    self.AdminStoragePath = /storage/BallotCollectionAdminStoragePath_testnet2
 
     // set admin account
     let admin <- create Admin()

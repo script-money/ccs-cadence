@@ -101,10 +101,10 @@ pub contract CCSToken: FungibleToken {
     init() {
       // Set our named paths.
       // remove _x when mainnet deploy
-      self.VaultStoragePath = /storage/CCSVault_0
-      self.ReceiverPublicPath = /public/CCSReceiver_0
-      self.BalancePublicPath = /public/CCSBalance_0
-      self.AdminStoragePath = /storage/CCSAdmin_0
+      self.VaultStoragePath = /storage/CCSVault_testnet2
+      self.ReceiverPublicPath = /public/CCSReceiver_testnet2
+      self.BalancePublicPath = /public/CCSBalance_testnet2
+      self.AdminStoragePath = /storage/CCSAdmin_testnet2
 
       self.totalSupply = 0.0
 
