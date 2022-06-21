@@ -459,6 +459,35 @@ pub contract ActivityContract {
       ) ?? panic("Could not borrow a reference to the Admin Reference")
       admin.closeActivity(activityId: id)
     }
+
+    // create airdrop activity
+    //
+    // moderator can create airdrop activity
+    pub fun createAirdropActivity(creator: Address, title: String, metadata: String, toList: [Address]){
+      var voteListMap: {Address: Bool} = {}
+      for address in toList{
+        if !voteListMap.keys.contains(address){
+          voteListMap.insert(key: address, true)
+        }
+      }
+
+      let newActivity <- create Activity(
+        _creator: creator, 
+        _title: title, 
+        metadata: metadata,
+        preVote: voteListMap
+      )
+
+      emit activityCreated(id: ActivityContract.totalSupply, title:title, metadata:metadata, creator:creator)
+
+      ActivityContract.totalSupply = ActivityContract.totalSupply + (1 as UInt64)
+
+      let adminActivityCollection = ActivityContract.account
+        .borrow<&ActivityContract.Collection>(from: ActivityContract.ActivityStoragePath)!
+
+      // activity resource will save in admin's collection
+      adminActivityCollection.deposit(activity: <-newActivity)
+      }
   }
 
   // initializer

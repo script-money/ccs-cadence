@@ -4,18 +4,17 @@
 	"description": "Integration tests for ccs using Flow JS Testing Framework",
 	"scripts": {
 		"test": "jest --runInBand",
-		"test:ccs": "jest CCSToken.test.js",
-		"test:bal": "jest Ballot.test.js",
-		"test:act": "jest Activity.test.js",
-		"test:adm": "jest Admin.test.js",
-		"test:mem": "jest Memorials.test.js"
+		"test:ccs": "jest --runInBand CCSToken",
+		"test:bal": "jest --runInBand Ballot",
+		"test:act": "jest --runInBand Activity",
+		"test:mem": "jest --runInBand Memorials"
 	},
 	"dependencies": {
 		"@babel/core": "^7.15.0",
 		"@babel/preset-env": "^7.15.0",
 		"@onflow/types": "^0.0.5",
 		"babel-jest": "^27.1.0",
-		"flow-js-testing": "^0.2.2",
+		"flow-js-testing": "^0.2.3-alpha.5",
 		"jest": "^27.1.0"
 	}
 }

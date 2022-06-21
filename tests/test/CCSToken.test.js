@@ -18,24 +18,22 @@ describe("CCSToken", () => {
 	// Instantiate emulator and path to Cadence files
 	beforeEach(async () => {
 		const basePath = path.resolve(__dirname, "../../");
-		const port = 7001;
+		const port = 8080;
 		await init(basePath, { port });
-		return emulator.start(port, false);
+		await emulator.start(port, false);
 	});
 
 	// Stop emulator, so it could be restarted
 	afterEach(async () => {
-		return emulator.stop();
+		await emulator.stop();
 	});
 
 	it("shall have initialized supply field correctly", async () => {
 		// Deploy contract
 		await shallPass(deployCCSToken());
 
-		await shallResolve(async () => {
-			const supply = (await getCCSTokenSupply())[0]
-			expect(supply).toBe(toUFix64(0));
-		});
+		const [supply] = await shallResolve(getCCSTokenSupply())
+		expect(supply).toBe(toUFix64(0));
 	});
 
 	it("shall user provision account", async () => {
@@ -62,22 +60,19 @@ describe("CCSToken", () => {
 				],
 				t.Dictionary({ key: t.Address, value: t.UFix64 }),
 			]
-		await shallResolve(async () => {
-			const result = await mintTokenAndDistribute(args)
-			const [event0, event1] = getEvents(result, "TokenAirdrop")
-			expect(event0.data.receiver).toBe(Alice);
-			expect(event0.data.amount).toBe(toUFix64(sendToAliceAmount));
-			expect(event1.data.receiver).toBe(Bob);
-			expect(event1.data.amount).toBe(toUFix64(sendToBobAmount));
-		});
+		const [result] = await shallResolve(mintTokenAndDistribute(args))
+		const [event0, event1] = getEvents(result, "TokenAirdrop")
+		expect(event0.data.receiver).toBe(Alice);
+		expect(event0.data.amount).toBe(toUFix64(sendToAliceAmount));
+		expect(event1.data.receiver).toBe(Bob);
+		expect(event1.data.amount).toBe(toUFix64(sendToBobAmount));
 
-		await shallResolve(async () => {
-			const supply = (await getCCSTokenSupply())[0]
-			const aliceBalance = (await getCCSTokenBalance(Alice))[0]
-			const boBBalance = (await getCCSTokenBalance(Bob))[0]
-			expect(supply).toBe(toUFix64(sendToAliceAmount + sendToBobAmount));
-			expect(aliceBalance).toBe(toUFix64(sendToAliceAmount));
-			expect(boBBalance).toBe(toUFix64(sendToBobAmount));
-		});
+		const [supply] = await shallResolve(getCCSTokenSupply())
+		const [aliceBalance] = await shallResolve(getCCSTokenBalance(Alice))
+		const [boBBalance] = await shallResolve(getCCSTokenBalance(Bob))
+
+		expect(supply).toBe(toUFix64(sendToAliceAmount + sendToBobAmount));
+		expect(aliceBalance).toBe(toUFix64(sendToAliceAmount));
+		expect(boBBalance).toBe(toUFix64(sendToBobAmount));
 	})
 })

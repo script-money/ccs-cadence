@@ -10,14 +10,14 @@ describe("Memorials", () => {
 	// Instantiate emulator and path to Cadence files
 	beforeEach(async () => {
 		const basePath = path.resolve(__dirname, "../../");
-		const port = 7001;
+		const port = 8080;
 		await init(basePath, { port });
-		return emulator.start(port, false);
+		await emulator.start(port, false);
 	});
 
 	// Stop emulator, so it could be restarted
 	afterEach(async () => {
-		return emulator.stop();
+		await emulator.stop();
 	});
 
 	it("shall deploy Memorials contract correctly", async () => {
@@ -31,9 +31,7 @@ describe("Memorials", () => {
 		const Admin = await getAdminAddress();
 		await shallPass(setupMemorialsOnAccount(Admin));
 
-		await shallResolve(async () => {
-			const supply = (await getMemorialsSupply())[0]
-			expect(supply).toBe(0);
-		});
+		const [supply] = await shallResolve(getMemorialsSupply())
+		expect(supply).toBe(0);
 	});
-})
+});

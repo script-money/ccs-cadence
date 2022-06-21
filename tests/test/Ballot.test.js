@@ -13,14 +13,14 @@ describe("Activity", () => {
 	// Instantiate emulator and path to Cadence files
 	beforeEach(async () => {
 		const basePath = path.resolve(__dirname, "../../");
-		const port = 7001;
+		const port = 8080;
 		await init(basePath, { port });
-		return emulator.start(port, false);
+		await emulator.start(port, false);
 	});
 
 	// Stop emulator, so it could be restarted
 	afterEach(async () => {
-		return emulator.stop();
+		await emulator.stop();
 	});
 
 	it("ballot contract can be deployed", async () => {
@@ -33,32 +33,17 @@ describe("Activity", () => {
 		const Alice = await getAccountAddress("Alice")
 
 		// can read ballot price
-		await shallResolve(async () => {
-			const price = (await getPrice())[0]
-			expect(price).toEqual(toUFix64(1))
-		})
+		const [price1] = await shallResolve(getPrice())
+		expect(price1).toEqual(toUFix64(1))
 
-		// admin can set new price and emit event
-		await shallResolve(async () => {
-			await setPrice(toUFix64(2), Admin)
-			const price = (await getPrice())[0]
-			expect(price).toEqual(toUFix64(2))
-		})
+
+		// admin can set new price and emit event		
+		await setPrice(toUFix64(2), Admin)
+		const [price2] = await shallResolve(getPrice())
+		expect(price2).toEqual(toUFix64(2))
 
 		// user can not set ballot price
-		await shallRevert(async () => {
-			await setPrice(toUFix(3), Alice)
-		})
-
-		// can not set same price
-		await shallRevert(async () => {
-			await setPrice(toUFix(2), Admin)
-		})
-
-		// can not set price to 0
-		await shallRevert(async () => {
-			await setPrice(toUFix(0), Admin)
-		})
+		await shallRevert(setPrice(toUFix64(3), Alice))
 	})
 
 	it("user can buy a ballot with $CCS", async () => {
@@ -78,47 +63,33 @@ describe("Activity", () => {
 		await mintTokenAndDistribute(args)
 
 		// privision ballot storage
-		await shallResolve(async () => {
-			const result = await setupBallotOnAccount(Alice)
-			const event = getEvent(result, 'ballotPrepared')
-			const address = event.data.address
-			expect(address).toBe(Alice)
-		})
+		const [result] = await shallResolve(setupBallotOnAccount(Alice))
+		const event = getEvent(result, 'ballotPrepared')
+		const address = event.data.address
+		expect(address).toBe(Alice)
 
 		// Alice can buy a ballot
-		await shallResolve(async () => {
-			const result = await buyBallots(Alice, 1)
-			const evenData = getEvent(result, 'ballotsBought')
-			expect(evenData.data.amount).toBe(1)
-			expect(evenData.data.buyer).toBe(Alice)
-			expect(evenData.data.price).toBe(toUFix64(1))
-		})
+		const [result2] = await shallResolve(buyBallots(Alice, 1))
+		const evenData = getEvent(result2, 'ballotsBought')
+		expect(evenData.data.amount).toBe(1)
+		expect(evenData.data.buyer).toBe(Alice)
+		expect(evenData.data.price).toBe(toUFix64(1))
 
 		// can not buy 0 ballot
-		await shallRevert(async () => {
-			await buyBallots(Alice, 0)
-		})
+		await shallRevert(buyBallots(Alice, 0))
 
 		// can not buy no enough token
-		await shallRevert(async () => {
-			await buyBallots(Alice, 1000)
-		})
+		await shallRevert(buyBallots(Alice, 1000))
 
 		// Alice can buy more ballots
-		await shallResolve(async () => {
-			await buyBallots(Alice, 14)
-		})
+		await shallResolve(buyBallots(Alice, 14))
 
 		// Anyone can check Alice's ballots number
-		await shallResolve(async () => {
-			const ballotHolding = (await getHoldings(Alice))[0]
-			expect(ballotHolding).toBe(15)
-		})
+		const [ballotHolding] = await shallResolve(getHoldings(Alice))
+		expect(ballotHolding).toBe(15)
 
 		// anyone can read how many ballots sold
-		await shallResolve(async () => {
-			const soldAmount = (await getSoldAmount())[0]
-			expect(soldAmount).toBe(15)
-		})
+		const [soldAmount] = await shallResolve(getSoldAmount())
+		expect(soldAmount).toBe(15)
 	})
 })

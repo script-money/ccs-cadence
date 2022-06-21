@@ -25,6 +25,12 @@ export const createActivity = async (account, title, metadata = "") => {
 
 	return sendTransaction({ name, args, signers });
 };
+export const createAirdropActivity = async (account, title, toList, metadata = "") => {
+	const name = "Activity/create_airdrop_activity";
+	const args = [title, metadata, toList]
+	const signers = [account];
+	return sendTransaction({ name, args, signers });
+};
 
 export const getCreateConsumption = async () => {
 	const name = "Activity/get_create_consumption";
